@@ -1,0 +1,26 @@
+\NeedsTeXFormat{LaTeX2e}%
+\ProvidesPackage{luatemplates}[2019/06/26 v0.1]
+
+\RequirePackage[options,lib]{lyluatextools}
+
+% Options
+\catcode`-=11
+\directlua{
+  local _opts = lyluatex_options
+  template_opts = _opts.Opts:new('template_opts', {
+    ['color'] = {'false', 'true', ''},
+      ['default-color'] = {'magenta'},
+    ['element-separator'] = {	'{,}' },
+    ['number-case'] = {'normal', 'smallcaps', 'upper', 'lower'},
+    ['range-follow'] = {'f.'},
+    ['range-ffollow'] = {'ff.'},
+    ['range-sep'] = {'--'},
+    ['list-sep'] = { '{, }'},
+    ['list-last-sep'] = {' and '},
+  })
+}
+\directlua{
+  lua_templates = require(
+    kpse.find_file("luatemplates.lua") or "luatemplates.lua")
+}
+\catcode`-=12
