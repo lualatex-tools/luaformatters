@@ -605,36 +605,39 @@ function Templates:shorthand(key)
     return self._shorthands[key] or err('Shorthand not defined: '..key)
 end
 
--- From: http://lua-users.org/wiki/SplitJoin
+
 function Templates:split_list(str, pat)
-  local t = {}
-  local cnt = 1
-  local fpat = "(.-)" .. pat
-  local last_end = 1
-  local s, e, cap = str:find(fpat, 1)
-  while s do
-    if s ~= 1 or cap ~= "" then
-       table.insert(t,cap)
-       cnt = cnt + 1
+--[[
+    Split a string into a list at the given pattern
+    Built upon: http://lua-users.org/wiki/SplitJoin
+--]]
+    local t = {}
+    local cnt = 1
+    local fpat = "(.-)" .. pat
+    local last_end = 1
+    local s, e, cap = str:find(fpat, 1)
+    while s do
+        if s ~= 1 or cap ~= "" then
+            table.insert(t,cap)
+            cnt = cnt + 1
+        end
+        last_end = e+1
+        s, e, cap = str:find(fpat, last_end)
     end
-    last_end = e+1
-    s, e, cap = str:find(fpat, last_end)
-  end
-  if last_end <= #str then
-    cap = str:sub(last_end)
-    table.insert(t, cap)
-  end
-  --[[
-  TODO: Investigate a luatex-like solution with str:explode().
-  The following does *not* work because the pattern is added to the list.
-  --
-  local t = {}
-  for _, elt in ipairs(str:explode(pat)) do
-    if elt ~= pat then table.insert(t, elt) end
-  end
-  local cnt = #t
-  --]]
-  return t, cnt
+    if last_end <= #str then
+        cap = str:sub(last_end)
+        table.insert(t, cap)
+    end
+    return t, cnt
+--[[
+    TODO: Investigate a luatex-like solution with str:explode().
+    The following does *not* work because the pattern is included in the list.
+    local t = {}
+    for _, elt in ipairs(str:explode(pat)) do
+        if elt ~= pat then table.insert(t, elt) end
+    end
+    local cnt = #t
+--]]
 end
 
 function Templates:split_range(text)
