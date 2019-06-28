@@ -169,15 +169,6 @@ function Templates:create_styles(var_name, styles)
   end
 end
 
-function Templates:format(key, ...)
-  local formatter = self:formatter(key)
-  if formatter and type(formatter) == 'function' then
-    return formatter(self, ...)
-  else
-    return self:replace(key, ...)
-  end
-end
-
 function Templates:find_node(key, root, create)
   local cur_node = root
   local parent_node = root
@@ -209,13 +200,44 @@ function Templates:find_parent(key, root)
   end
 end
 
+function Templates:format(key, ...)
+--[[
+    Format and return the given data
+    using either template replacement or a formatting function.
+    NOTE: if `key` points to a *template* ... must be exactly
+    one table holding the replacement pairs.
+--]]
+    local formatter = self:formatter(key)
+    if not formatter then
+        err(string.format([[
+        Trying to format values
+        %s
+        but no template/formatter found at key
+        %s]], ..., key)
+    end
+    if type(formatter) == 'function' then
+        return formatter(self, ...)
+    else
+        return self:replace(key, ...)
+    end
+end
+
 function Templates:formatter(key)
-  -- first check for builtin formatting method of the Templates class
-  local method = self._builtin_formatters[key]
-  if method then return method end
-  method = self:find_node(key, self._formatters)
-  -- TODO: Search for templates
-  return method
+--[[
+    Find a formatter matching the given key.
+    Look for both templates and formatter methods.
+--]]
+    local result
+    for _, root in ipairs{
+        self._builtin_formatters,
+        self._formatters,
+        self._shorthands,
+        self._styles,
+        self._templates
+    } do
+        result = self:find_node(key, root)
+        if result then return result end
+    end
 end
 
 function Templates:list_join(list, separator)
