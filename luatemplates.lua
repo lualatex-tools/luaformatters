@@ -394,16 +394,68 @@ function Templates:formatter(key)
     end
 end
 
-function Templates:list_join(list, separator, last_sep)
+function Templates:list_format(text, options)
 --[[
-    Join a list of strings with the given separator, last_sep or ', '.
-    Having a different last_sep makes sense in “human-language” itemizations
-    and is modeled after biblatex's handling.
-    TODO: integrate biblatex's handling of compressing long lists.
+    Format a list specified from a BibTeX-style list field.
+    `text` is parsed as a list from a single text.
+    By default input is parsed using the separator ' and ',
+    the output separators are specified with the 'list-sep' and
+    the 'list-last-sep' package options.
+    If an option table is given it may contain the following options:
+    - input_separator
+      Change the parsing behaviour (in case 'and' is valid part of an input element)
+    - separator
+      separator to be used for all but the last element pairs
+    - last_sep
+      separator to be used for the last element pair
+    TODO: incorporate biblatex's list compressing behaviour
+    - formatter
+      If a formatter is given as an option every list element is passed to
+      that (similar to the `map` construct in some programming languages).
+      formatter may be either a key (as passed to Templates:formatter()) or an
+      actual function. The returned formatter must accept exactly one argument,
+      so the registered 'styles' may be good formatters. Some of the built-in
+      formatters are also suitable, maybe the most-used formatter is 'range'
+      (see Templates:range) or 'number' (see Templates:number).
+--]]
+    if not text or text == ''  then return '' end
+    options = options or {}
+
+    local elements = self:split_list(text, options.input_separator or ' and ')
+    local formatter = options.formatter
+    if formatter then
+        for i, elt in ipairs(elements) do
+            if type(formatter) == 'function' then
+                elements[i] = formatter(self, elt)
+            else
+                elements[i] = self:format(formatter, elt)
+            end
+        end
+    end
+    return self:list_join(elements, {
+        separator = options.separator or template_opts['list-sep'],
+        last_sep = options.last_sep or template_opts['list-last-sep'],
+    })
+end
+
+function Templates:list_join(list, options)
+--[[
+    Join a list of strings with ', '.
+    If the list is empty an empty string is returned.
+    If the list consists of one element this is returned as-is.
+    With `options` the behaviour can be changed:
+    - options.separator
+      specifies a different separator for all but the last join
+    - options.last_sep
+      specifies the separator between the last two elements.
+     the given separator, last_sep or ', '. If it is *not* given the default
+     is the regular separator.
+    TODO: integrate/emulate biblatex's handling of compressing long lists.
     NOTE: Is it really true that there is no such command in Lua?
 --]]
-    sep = separator or ', '
-    last_sep = last_sep or ', '
+    local options = options or {}
+    local sep = options.separator or ', '
+    local last_sep = options.last_sep or sep
     if #list == 0 then return ''
     elseif #list == 1 then return list[1]
     elseif #list == 2 then return list[1]..last_sep..list[2]
@@ -416,55 +468,6 @@ function Templates:list_join(list, separator, last_sep)
         until index == last - 1
         return result..last_sep..list[last]
     end
-end
-
---[[
-TODO: Translate and check (if it still matches the behaviour)
-Formatiere einen Zahlbereich (z.B. Seiten), unterstüzt werden dabei:
-- Einzelne Zahlen (5)
-- Römische Ziffern
-  - v
-  - VII
-  (werden alle in Kapitälchen umgewandelt)
-- Formatierte Texte (sobald ein '\' vorkommt, wird der ganze Eintrag übernommen)
-  - 8\,\textsuperscript{\textsc{iv}}
-    (hier müssen auch die Kapitälchen manuell formatiert werden)
-- Bereiche, getrennt durch einfachen Bindestrich
-  - 5-6
-  - xi-xiv
-- Bereiche mit 'ff' als zweitem Teil:
-  - 12-ff => wird zu LaTeX-Code 12\,ff.
-- Aufzählungen:
-  - 5 and 11 and 17-19
-  der letzte Eintrag wird mit 'u.' abgetrennt, vorige mit Komma
-- Alle Kombinationen:
-  - 5 and 7-ff and 6\textsuperscript{b}
---]]
-function Templates:list_process(text, formatter)
-  if not text or text == ''  then return '' end
-  local elements = self:split_list(text, ' and ')
-  if formatter then
-    for i, elt in ipairs(elements) do
-      if type(formatter) == 'function' then
-        elements[i] = formatter(self, elt)
-      else
-        elements[i] = self:format(formatter, elt)
-      end
-    end
-  end
-  if #elements == 1 then return elements[1]
-  elseif #elements == 2 then
-    return elements[1] .. ' ' .. template_opts['list-last-sep'] .. ' ' .. elements[2]
-  end
-  local result = ''
-  local last = table.remove(elements)
-  for i, elt in ipairs(elements) do
-    -- TODO: The hard-coded spaces are bad. However, it seems
-    -- that trailing spaces are removed from the options.
-    if i > 1 then result = result .. template_opts['list-sep'] .. ' ' end
-    result = result .. elt
-  end
-  return result .. template_opts['list-last-sep'] .. ' ' .. last
 end
 
 function Templates:number(text)
@@ -487,6 +490,28 @@ function Templates:_numbered_argument(number)
 end
 
 function Templates:range(text)
+    --[[
+    TODO: Translate and check (if it still matches the behaviour)
+    Formatiere einen Zahlbereich (z.B. Seiten), unterstüzt werden dabei:
+    - Einzelne Zahlen (5)
+    - Römische Ziffern
+      - v
+      - VII
+      (werden alle in Kapitälchen umgewandelt)
+    - Formatierte Texte (sobald ein '\' vorkommt, wird der ganze Eintrag übernommen)
+      - 8\,\textsuperscript{\textsc{iv}}
+        (hier müssen auch die Kapitälchen manuell formatiert werden)
+    - Bereiche, getrennt durch einfachen Bindestrich
+      - 5-6
+      - xi-xiv
+    - Bereiche mit 'ff' als zweitem Teil:
+      - 12-ff => wird zu LaTeX-Code 12\,ff.
+    - Aufzählungen:
+      - 5 and 11 and 17-19
+      der letzte Eintrag wird mit 'u.' abgetrennt, vorige mit Komma
+    - Alle Kombinationen:
+      - 5 and 7-ff and 6\textsuperscript{b}
+    --]]
   local from, to = self:split_range(text)
   if not to then return self:number(text)
   elseif to == 'f' then
