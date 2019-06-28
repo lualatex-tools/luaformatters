@@ -35,6 +35,7 @@ function Templates:new(formatters)
             add_element = Templates.add_element,
             add_subscript = Templates.add_subscript,
             add_superscript = Templates.add_superscript,
+            case = Templates.case,
             number = Templates.number,
             range = Templates.range,
             -- The following formatters are special functions
@@ -42,20 +43,6 @@ function Templates:new(formatters)
             shorthand = Templates.shorthand,
             style = Templates.style,
         }
-    }
-    o._formatters['number-case'] = {
-        normal = function (self, text)
-            return text
-        end,
-        smallcaps = function (self, text)
-            return string.format([[\textsc{\lowercase{%s}}]], text)
-        end,
-        upper = function (self, text)
-            return string.format([[\uppercase{%s}]], text)
-        end,
-        lower = function (self, text)
-            return string.format([[\lowercase{%s}]], text)
-        end,
     }
     setmetatable(o, self)
     self.__index = self
@@ -106,6 +93,21 @@ function Templates:add_superscript(base, super, parenthesis)
     Add a superscript the the given base string.
 --]]
     return self:_add_ssscript('super', base, super, parenthesis)
+end
+
+function Templates:case(case, text)
+--[[
+    Format text according to a given case strategy.
+    TODO: Maybe add camelcasing or other more advanced features?
+--]]
+    local templates = {
+        normal = '%s',
+        allsmallcaps = [[\textsc{\lowercase{%s}}]],
+        smallcaps = [[\textsc{%s}]],
+        upper = [[\uppercase{%s}]],
+        lower = [[\lowercase{%s}]]
+    }
+    return string.format(templates[case], text)
 end
 
 function Templates:create_command(var_name, name, properties)
@@ -470,13 +472,20 @@ function Templates:list_join(list, options)
     end
 end
 
-function Templates:number(text)
-  if tonumber(text) or text:find('\\') then return text
-  else
-    return self:format('number-case.' .. template_opts['number-case'], text)
---    return self:replace('number-case-' .. template_opts['number-case'], {
---      number = text })
-  end
+function Templates:number(text, options)
+--[[
+    Format numbers (WIP), including handling case for roman numerals.
+    If `text` is either a simple number or contains a '\' (in which
+    case it is considered a custom-formatted text) it is returned as-is,
+    otherwise the case (only useful for roman numerals, e.g. in paginations)
+    will be processed according to the 'number-case' package option or the
+    'number-case' option in the passed `options`.
+--]]
+    options = options or {}
+    if tonumber(text) or text:find('\\') then return text end
+    return self:format('case',
+        options['number-case'] or template_opts['number-case'],
+        text)
 end
 
 function Templates:_numbered_argument(number)
