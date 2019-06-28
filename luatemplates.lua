@@ -222,7 +222,7 @@ function Templates:create_commands(var_name, map)
   end
 end
 
-function Templates:create_shorthand(var_name, key, result)
+function Templates:create_shorthand(var_name, key, template)
 --[[
     Create a “shorthand” LaTeX command.
     - var_name
@@ -230,16 +230,20 @@ function Templates:create_shorthand(var_name, key, result)
       referenced inside \directlua{}
     - `key`
       will be the name of the command
-    - `result`
-      the replacement text:
-      `Templates:create_shorthand('my_templates', 'abbr', 'my abbreviation')`
-      will produce the equivalent to
-      `\newcommand{\abbr}{my abbreviation}`
+    - `template`
+      the replacement text or an array with template and color, where the
+      special color 'nocolor' will prevent the coloring even when it is
+      globally switched on.
 --]]
-    self._shorthands[key] = result
+    local color = 'default'
+    if type (template) == 'table' then
+        color = template[2]
+        template = template[1]
+    end
+    self._shorthands[key] = template
     tex.print(string.format([[
-\newcommand{\%s}{\directlua{%s:write('shorthand', '%s')}}]],
-      key, var_name, key))
+\newcommand{\%s}{\directlua{%s:write({ 'shorthand', '%s' }, '%s')}}]],
+      key, var_name, color, key))
 end
 
 function Templates:create_shorthands(var_name, templates)
