@@ -538,16 +538,34 @@ function Templates:range(text, options)
 end
 
 function Templates:_replace(template, data)
-  if type(data) ~= 'table' then err(
-    string.format('Trying to replace templates with non-table data %s', data)) end
-  for k, v in pairs(data) do
-    template = template:gsub('<<<'..k..'>>>', v)
-  end
-  return template
+--[[
+    Replace the fields in the given template with data from the given table.
+    Fields are defined by a keyword enclosed by three pairs of angled brackets.
+    The keywords must not contain hyphens and should be limited to alphabetic characters.
+--]]
+    if type(data) ~= 'table' then
+        err(string.format([[
+Trying to replace template with non-table data.
+    Template:
+%s
+    Data:
+%s]], template, data))
+    end
+    for k, v in pairs(data) do
+        template = template:gsub('<<<'..k..'>>>', v)
+    end
+    return template
 end
 
 function Templates:replace(key, data)
-  return self:_replace(self:template(key), data)
+--[[
+    Replace fields from a template.
+    - key
+      Name of a template
+    - data
+      Table with replacement data (keys are template fields, values the data)
+--]]
+    return self:_replace(self:template(key), data)
 end
 
 function Templates:set_template(key, template)
@@ -617,8 +635,18 @@ function Templates:style(style, text, color)
 end
 
 function Templates:template(key)
-  return self:find_node(key, self._templates)
-  or err(string.format('Template "%s" undefined', key))
+--[[
+    Retrieve a template for the given key.
+    Raise an error if no template is defined or if a function is found instead.
+--]]
+    local result = self:find_node(key, self._templates) or err(string.format('Template "%s" undefined', key))
+    if type(result) == 'string' then
+        return result
+    else
+        err(string.format([[
+Template for "%s"
+is not a template but a function.]], key))
+    end
 end
 
 function Templates:wrap_kv_option(key, value)
