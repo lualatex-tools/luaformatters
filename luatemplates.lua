@@ -561,20 +561,37 @@ function Templates:replace(key, data)
 --[[
     Replace fields from a template.
     - key
-      Name of a template
+      Name/path of a template
     - data
       Table with replacement data (keys are template fields, values the data)
 --]]
     return self:_replace(self:template(key), data)
 end
 
-function Templates:set_template(key, template)
-  local parent
-  parent, key = self:find_parent(key, self._templates, true)
-  parent[key] = template
-end
-
 function Templates:set_formatter(category, key, formatter)
+--[[
+    Install one or multiple formatters in the Templates object.
+    - category (string)
+      One out of
+      - templates
+      - formatters
+      - shorthands
+      - styles
+    A 'formatter' is stored in position `key` in that table.
+    - key
+      May be either a simple key or a dot-list notation pointing
+      to a place in the hierachy. Nodes are created if necessary.
+    - formatter (string, function, table)
+      May be either a string template (in templates, shorthands or styles)
+      or a formatter function (in formatters).
+      It can also be a table providing multiple formatters that
+      will extend the category's hierarchy.
+    NOTE: This will *not* create LaTeX commands but only make the formatter(s)
+    available. Usually it should be preferrable to either provide formatter(s)
+    through the `create_NN` commands or in Templates:new. If they are intended
+    to be available from other formatting functions it may be more
+    straightforward to simply write toplevel methods for the Templates object.
+--]]
     local parent = self['_'..category] or err(string.format([[
 Trying to set formatter "%s"
 to nonexisting category %s]], key, category))
