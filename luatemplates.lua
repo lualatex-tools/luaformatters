@@ -56,13 +56,23 @@ function Templates:new(formatters)
 end
 
 function Templates:add_element(base, element, separator)
-  if base == '' then
-    return element
-  else
-    local sep = separator or template_opts['element-separator']
-    warn("Achtung: add_element verschluckt Leerzeichen!")
-    return base .. sep .. ' ' .. element
-  end
+--[[
+    Built-in formatter:
+    Add an element to a base string, using either the separator
+    specified by the package options or a given one.
+--]]
+    if base == '' then
+        return element
+    else
+        local sep = separator or template_opts['element-separator']
+        if not separator then
+            warn([[
+Bug:
+Add_element swallows spaces
+from option-provided separator!]])
+        end
+        return base .. sep .. element
+    end
 end
 
 function Templates:add_superscript(base, super, parenthesis)
