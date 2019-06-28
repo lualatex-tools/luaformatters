@@ -179,7 +179,7 @@ function Templates:create_command(var_name, name, properties)
                 table.insert(args, string.format(self:_numbered_argument(arg_num)))
             end
         end
-        args = self:list_join(args, ', ')
+        args = self:list_join(args)
         if arg_num > 0 then
             arg_num = string.format('[%s]', arg_num)
         else
@@ -394,19 +394,27 @@ function Templates:formatter(key)
     end
 end
 
-function Templates:list_join(list, separator)
-    -- Is it true that there is no such command in Lua?
+function Templates:list_join(list, separator, last_sep)
+--[[
+    Join a list of strings with the given separator, last_sep or ', '.
+    Having a different last_sep makes sense in “human-language” itemizations
+    and is modeled after biblatex's handling.
+    TODO: integrate biblatex's handling of compressing long lists.
+    NOTE: Is it really true that there is no such command in Lua?
+--]]
+    sep = separator or ', '
+    last_sep = last_sep or ', '
     if #list == 0 then return ''
     elseif #list == 1 then return list[1]
-    elseif #list == 2 then return list[1]..separator..list[2]
+    elseif #list == 2 then return list[1]..last_sep..list[2]
     else
         local result = list[1]
         local index, last = 1, #list
         repeat
-          index = index + 1
-          result = result .. separator .. list[index]
-        until index == last
-        return result
+            index = index + 1
+            result = result..sep..list[index]
+        until index == last - 1
+        return result..last_sep..list[last]
     end
 end
 
