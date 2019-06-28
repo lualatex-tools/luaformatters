@@ -465,9 +465,11 @@ end
 
 function Templates:wrap_macro(macro, value)
 --[[
-    If value is not empty return it wrapped in a macro, or an empty string.
+    If value is not empty return it wrapped in a macro, else an empty string.
     'macro' is a macro name without the leading backslash:
     'mymacro', 'myvalue' will return \mymacro{myvalue}
+    TODO: Support a value *list*, creating multiple arguments, including an
+    optional one.
 --]]
     if value and value ~= '' then
         return string.format([[\%s{%s}]], macro, value)
