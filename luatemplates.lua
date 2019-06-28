@@ -28,10 +28,17 @@ function Templates:new(formatters)
         _shorthands = formatters.shorthands or {},
         _styles = formatters.styles or {},
         _builtin_formatters = {
+            -- These formatters are generic formatting functions
+            -- that should be usable directly from outside.
+            -- Just keep in mind that they expect a first `self`
+            -- argument that should point to the Templates table.
             add_element = Templates.add_element,
+            add_subscript = Templates.add_subscript,
             add_superscript = Templates.add_superscript,
             number = Templates.number,
             range = Templates.range,
+            -- The following formatters are special functions
+            -- handling the auto-generated shorthands and styles
             shorthand = Templates.shorthand,
             style = Templates.style,
         }
@@ -75,10 +82,30 @@ from option-provided separator!]])
     end
 end
 
+function Templates:_add_ssscript(direction, base, element, parenthesis)
+--[[
+    Add a super- or subscript to the given base string.
+    If `element` is not given or an empty string, no action is taken.
+    If `parenthesis` is a true value the super/subscript is wrapped in
+    parentheses.
+--]]
+    if not (element and element ~= '') then return base end
+    if parenthesis then element = '(' .. element .. ')' end
+    return base .. self:wrap_macro('text'..direction..'script', element)
+end
+
+function Templates:add_subscript(base, super, parenthesis)
+--[[
+    Add a subscript the the given base string.
+--]]
+    return self:_add_ssscript('sub', base, super, parenthesis)
+end
+
 function Templates:add_superscript(base, super, parenthesis)
-  if not (super and super ~= '') then return base end
-  if parenthesis then super = '(' .. super .. ')' end
-  return base .. '\\textsuperscript{' .. super .. '}'
+--[[
+    Add a superscript the the given base string.
+--]]
+    return self:_add_ssscript('super', base, super, parenthesis)
 end
 
 function Templates:create_command(var_name, name, properties)
