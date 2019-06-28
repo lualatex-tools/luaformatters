@@ -220,22 +220,78 @@ function Templates:create_commands(var_name, map)
   end
 end
 
-function Templates:create_shorthands(var_name, templates)
-  for k, v in pairs(templates) do
-    self._shorthands[k] = v
+function Templates:create_shorthand(var_name, key, result)
+--[[
+    Create a “shorthand” LaTeX command.
+    - var_name
+      The name of a global variable by which this Templates object can be
+      referenced inside \directlua{}
+    - `key`
+      will be the name of the command
+    - `result`
+      the replacement text:
+      `Templates:create_shorthand('my_templates', 'abbr', 'my abbreviation')`
+      will produce the equivalent to
+      `\newcommand{\abbr}{my abbreviation}`
+--]]
+    self._shorthands[key] = result
     tex.print(string.format([[
-      \newcommand{\%s}{\directlua{%s:write('shorthand', '%s')}}]],
-      k, var_name, k))
-  end
+\newcommand{\%s}{\directlua{%s:write('shorthand', '%s')}}]],
+      key, var_name, key))
+end
+
+function Templates:create_shorthands(var_name, templates)
+--[[
+    Create multiple “shorthand” LaTeX commands.
+    - var_name
+      The name of a global variable by which this Templates object can be
+      referenced inside \directlua{}
+    - templates
+      table with templates (see Templates:create_shorthand)
+--]]
+    for key, result in pairs(templates) do
+        self:create_shorthand(var_name, key, result)
+    end
+end
+
+function Templates:create_style(var_name, key, template)
+    --[[
+        Create a “style” LaTeX command.
+        Styles are regular character styles but can be anything where a single
+        argument is replaced with some text.
+        - var_name
+          The name of a global variable by which this Templates object can be
+          referenced inside \directlua{}
+        - `key`
+          will be the name of the command
+        - `template`
+          the template where the command's single argument will be replaced with.
+          NOTE: The template *must* include the key `<<<text>>>`
+    --]]
+    if not template:find('<<<text>>>') then
+        err(string.format([[
+Trying to create style "%s"
+but template does not include "<<<text>>>":
+%s]], key, template))
+    end
+    self._styles[key] = template
+    tex.print(string.format([=[
+      \newcommand{\%s}[1]{\directlua{%s:write('style', '%s', %s)}}]=],
+      key, var_name, key, self:_numbered_argument(1)))
 end
 
 function Templates:create_styles(var_name, styles)
-  for k, v in pairs(styles) do
-    self._styles[k] = v
-    tex.print(string.format([=[
-      \newcommand{\%s}[1]{\directlua{%s:write('style', '%s', [[\string#1]])}}]=],
-      k, var_name, k))
-  end
+    --[[
+        Create multiple “style” LaTeX commands.
+        - var_name
+          The name of a global variable by which this Templates object can be
+          referenced inside \directlua{}
+        - templates
+          table with templates (see Templates:create_style)
+    --]]
+    for key, template in pairs(styles) do
+        self:create_style(var_name, key, template)
+    end
 end
 
 function Templates:find_node(key, root, create)
