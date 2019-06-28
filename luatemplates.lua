@@ -257,19 +257,27 @@ function Templates:create_shorthands(var_name, templates)
 end
 
 function Templates:create_style(var_name, key, template)
-    --[[
-        Create a “style” LaTeX command.
-        Styles are regular character styles but can be anything where a single
-        argument is replaced with some text.
-        - var_name
-          The name of a global variable by which this Templates object can be
-          referenced inside \directlua{}
-        - `key`
-          will be the name of the command
-        - `template`
-          the template where the command's single argument will be replaced with.
-          NOTE: The template *must* include the key `<<<text>>>`
-    --]]
+--[[
+    Create a “style” LaTeX command.
+    Styles are regular character styles but can be anything where a single
+    argument is replaced with some text.
+    - var_name
+      The name of a global variable by which this Templates object can be
+      referenced inside \directlua{}
+    - `key`
+      will be the name of the command
+    - `template`
+      the template where the command's single argument will be replaced with.
+      NOTE: The template *must* include the key `<<<text>>>`
+      This is either a string, or an array with two strings. In this the first
+      string is the template and the second a color. The special color 'nocolo'
+      prevents the style to be colored even when coloring is switched on.
+--]]
+    local color = 'default'
+    if type(template) == 'table' then
+        color = template[2]
+        template = template[1]
+    end
     if not template:find('<<<text>>>') then
         err(string.format([[
 Trying to create style "%s"
@@ -278,8 +286,8 @@ but template does not include "<<<text>>>":
     end
     self._styles[key] = template
     tex.print(string.format([=[
-      \newcommand{\%s}[1]{\directlua{%s:write('style', '%s', %s)}}]=],
-      key, var_name, key, self:_numbered_argument(1)))
+        \newcommand{\%s}[1]{\directlua{%s:write({ 'style', '%s' }, '%s', %s)}}]=],
+        key, var_name, color, key, self:_numbered_argument(1)))
 end
 
 function Templates:create_styles(var_name, styles)
@@ -655,9 +663,14 @@ function Templates:split_range(text)
     end
 end
 
-function Templates:style(style, text, color)
-  local template = self._styles[style] or err('Style not defined: ' .. style)
-  return self:_replace(template, { text = text })
+function Templates:style(style, text)
+--[[
+    Apply a style to the given text.
+    - style
+      must refer to a stored style.
+--]]
+    local template = self._styles[style] or err('Style not defined: ' .. style)
+    return self:_replace(template, { text = text })
 end
 
 function Templates:template(key)
