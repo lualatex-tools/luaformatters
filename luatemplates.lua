@@ -295,34 +295,63 @@ function Templates:create_styles(var_name, styles)
 end
 
 function Templates:find_node(key, root, create)
-  local cur_node = root
-  local parent_node = root
-  local next_node
-  for _, k in ipairs(key:explode('.')) do
-    next_node = cur_node[k]
-    if next_node then
-      parent_node = cur_node
-      cur_node = next_node
-    else
-      if create then
-        cur_node[k] = {}
-        cur_node = cur_node[k]
-      else
-        return
-      end
+--[[
+    Find a node in a tree (table)
+    - key (string)
+      Name of the node in dot-list-notation.
+      If an empty string is provided return the original root.
+    - root (table)
+      Starting point for the search (usually a toplevel table in Templates)
+    - create (boolean)
+      If the given node is not found in the table it is either created
+      (as an empty table) or nil is returned, depending on `create` being
+      a true value.
+--]]
+    if key == '' then return root end
+    local cur_node, next_node = root
+    for _, k in ipairs(key:explode('.')) do
+        next_node = cur_node[k]
+        if next_node then
+            cur_node = next_node
+        else
+            if create then
+                cur_node[k] = {}
+                cur_node = cur_node[k]
+            else
+                return
+            end
+        end
     end
-  end
-  return cur_node
+    return cur_node
 end
 
-function Templates:find_parent(key, root)
-  local path, k
-  path, k = key:match('(.*)%.(.*)')
-  if path then
-    return self:find_node(path, root, true), k
-  else
-    return root, key
-  end
+function Templates:find_parent(key, root, create)
+--[[
+    Find a parent and key name.
+    - key (string)
+      Name of the node in dot-list-notation.
+      If an empty string is provided return the original root.
+    - root (table)
+      Starting point for the search (usually a toplevel table in Templates)
+    - create (boolean)
+      If the given node is not found in the table it is either created
+      (as an empty table) or nil is returned, depending on `create` being
+      a true value.
+--]]
+    if key == '' then return root, nil end
+    local path, k = key:match('(.*)%.(.*)')
+    if path then
+        return self:find_node(path, root, create), k
+    else
+        if root[key] then
+            return root, key
+        elseif create then
+            root[key] = {}
+            return root, key
+        else
+            return root, nil
+        end
+    end
 end
 
 function Templates:format(key, ...)
@@ -476,7 +505,7 @@ end
 
 function Templates:set_template(key, template)
   local parent
-  parent, key = self:find_parent(key, self._templates)
+  parent, key = self:find_parent(key, self._templates, true)
   parent[key] = template
 end
 
