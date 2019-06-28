@@ -498,38 +498,43 @@ function Templates:_numbered_argument(number)
     return string.format([["\luatexluaescapestring{\unexpanded{#%s}}"]], number)
 end
 
-function Templates:range(text)
-    --[[
-    TODO: Translate and check (if it still matches the behaviour)
-    Formatiere einen Zahlbereich (z.B. Seiten), unterstüzt werden dabei:
-    - Einzelne Zahlen (5)
-    - Römische Ziffern
-      - v
-      - VII
-      (werden alle in Kapitälchen umgewandelt)
-    - Formatierte Texte (sobald ein '\' vorkommt, wird der ganze Eintrag übernommen)
-      - 8\,\textsuperscript{\textsc{iv}}
-        (hier müssen auch die Kapitälchen manuell formatiert werden)
-    - Bereiche, getrennt durch einfachen Bindestrich
-      - 5-6
-      - xi-xiv
-    - Bereiche mit 'ff' als zweitem Teil:
-      - 12-ff => wird zu LaTeX-Code 12\,ff.
-    - Aufzählungen:
-      - 5 and 11 and 17-19
-      der letzte Eintrag wird mit 'u.' abgetrennt, vorige mit Komma
-    - Alle Kombinationen:
-      - 5 and 7-ff and 6\textsuperscript{b}
+function Templates:range(text, options)
+--[[
+    Parse and format a range (useful e.g. for pagination commands).
+    A range is first considered as a string with one hyphen in it. This is split in
+    two at the *first* hyphen, any subsequent hyphens (also when the range is written as
+    3--4) will be part of the second part.
+    The two parts are consider as 'from' and 'to'.
+    If there is no hyphen the text is considered as a single element/number, without a 'to'.
+    Each element may be one out of:
+    - numbers
+      => anything that Lua's `tonumber` function accepts as a number
+    - roman numerals
+      depending on the package option 'number-case' these are left as they are or processed
+      to a consistent case.
+      NOTE: This affects *any* text, which may or may not be desirable/acceptable
+    - LaTeX-formatted text. If any '\' is found the part is left untouched.
+    - 'f' or 'ff' ('to' part only)
+      If the 'to' part is 'f' or 'ff' it is replaced with the value of the
+      'range-follow' or 'fange-ffollow' option, by default 'f.' and 'ff.', while
+      the range separator is suppressed
+    The range separator is controlled by the 'range-sep' package option,
+    which by default is '--'.
+    The package options can also be overridden by the optional `options` table.
     --]]
-  local from, to = self:split_range(text)
-  if not to then return self:number(text)
-  elseif to == 'f' then
-    return self:number(from) .. template_opts['range-follow']
-  elseif to == 'ff' then
-    return self:number(from) .. template_opts['range-ffollow']
-  else
-    return self:number(from) .. template_opts['range-sep'] .. self:number(to)
-  end
+    options = options or {}
+    local from, to = self:split_range(text)
+    if not to then return self:number(text)
+    elseif to == 'f' then
+        local range_follow = options['range-follow'] or template_opts['range-follow']
+        return self:number(from) .. range_follow
+    elseif to == 'ff' then
+        local range_ffollow = options['range-ffollow'] or template_opts['range-ffollow']
+        return self:number(from) .. range_ffollow
+    else
+        local range_sep = options['range-sep'] or template_opts['range-sep']
+        return self:number(from) .. range_sep .. self:number(to)
+    end
 end
 
 function Templates:_replace(template, data)
@@ -549,6 +554,13 @@ function Templates:set_template(key, template)
   local parent
   parent, key = self:find_parent(key, self._templates, true)
   parent[key] = template
+end
+
+function Templates:set_formatter(category, key, formatter)
+    local parent = self['_'..category] or err(string.format([[
+Trying to set formatter "%s"
+to nonexisting category %s]], key, category))
+    parent[key] = formatter
 end
 
 function Templates:shorthand(key)
