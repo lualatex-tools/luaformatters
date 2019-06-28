@@ -1,10 +1,10 @@
 local err, warn, info, log = luatexbase.provides_module({
     name               = "luatemplates",
-    version            = '0.1',
-    date               = "2019/06/26",
+    version            = '0.5',
+    date               = "2019/06/28",
     description        = "Lua module for templating.",
     author             = "Urs Liska",
-    copyright          = "2019 - Urs Liska",
+    copyright          = "2019- Urs Liska",
     license            = "GPL3",
 })
 
@@ -12,18 +12,28 @@ local Templates = {}
 
 function Templates:new(templates, formatters)
   local o = {
-    _templates = {}, -- create *copy*
-    _formatters = formatters or {} -- create *reference*
+    _templates = templates or {},
+    _formatters = formatters or {},
+    _shorthands = {},
+    _styles = {},
+    _builtin_formatters = {
+      add_element = Templates.add_element,
+      add_superscript = Templates.add_superscript,
+      number = Templates.number,
+      range = Templates.range,
+      shorthand = Templates.shorthand,
+      style = Templates.style,
+    }
   }
-  if type(templates) == 'table' then
-    for k, v in pairs(templates) do
-      o._templates[k] = v
-    end
-  end
-  o._templates['number-case-normal'] = '<<<number>>>'
-  o._templates['number-case-smallcaps'] = '\\textsc{\\lowercase{<<<number>>>}}'
-  o._templates['number-case-upper'] = '\\uppercase{<<<number>>>}'
-  o._templates['number-case-lower'] = '\\lowercase{<<<number>>>}'
+  o._formatters['number-case'] = {
+    normal = function (self, text) return text end,
+    smallcaps = function (self, text)
+      return string.format([[\textsc{\lowercase{%s}}]], text) end,
+    upper = function (self, text)
+      return string.format([[\uppercase{%s}]], text) end,
+    lower = function (self, text)
+      return string.format([[\lowercase{%s}]], text) end,
+  }
   setmetatable(o, self)
   self.__index = self
   return o
@@ -45,6 +55,94 @@ function Templates:add_superscript(base, super, parenthesis)
   return base .. '\\textsuperscript{' .. super .. '}'
 end
 
+function Templates:_create_argument(number)
+    return string.format([["\luatexluaescapestring{\unexpanded{#%s}}"]], number)
+end
+
+function Templates:create_commands(var_name, map)
+  local opt, arg_num, args, formatter, color
+  for k, v in pairs(map) do
+    arg_num = 0
+    args = ''
+    opt = ''
+    formatter = ''
+    color = ''
+    if type(v) == 'string' then
+      formatter = string.format([['%s']], v)
+      color = 'default'
+      arg_num = '[1]'
+      opt = ''
+      args = self:_create_argument(1) --=[[[\string#1]]]=]
+    else
+      formatter = string.format([[{ '%s', '%s' }]],
+        v.f, v.color or 'default')
+      args = {}
+      if v.opt then
+        arg_num = 1
+        opt = string.format('[%s]', v.opt)
+        table.insert(args, self:_create_argument(1))
+      end
+      if v.args then
+        for i, _ in ipairs(v.args) do
+          arg_num = arg_num + 1
+          table.insert(args, string.format(self:_create_argument(arg_num)))
+        end
+      end
+      args = self:list_join(args, ', ')
+      if arg_num > 0 then
+        arg_num = string.format('[%s]', arg_num)
+      else
+        arg_num = ''
+      end
+    end
+    local result = string.format([[
+\newcommand{\%s}%s%s{\directlua{%s:write(%s, %s)}}]],
+      k, arg_num, opt, var_name, formatter, args)
+    if k == 'manuskript' then
+      print()
+      print("Generierter Befehl")
+      print(result)
+--      err("Ende")
+    end
+    tex.print(result)
+  end
+end
+
+local map = {
+  bereich = 'tools.bereich',
+  dv = 'schubert.dv',
+--  gedicht = { f = 'gedicht.gedicht', color = 'nocolor', opt = '' },
+--  lied = { f = 'schubert.lied', args = { 'titel', 'dv' }, opt = '' },
+--  manuskript = { f = 'abb.manuskript', color = 'nocolor', opt = '' },
+  noten = 'musik.noten',
+--  notenbeispiel = { f = 'abb.notenbeispiel', color = 'nocolor', opt = '' },
+--  nsa = { f = 'schubert.nsa', args = { 'band', 'seiten' }, opt = '' },
+  opus = 'musik.opus',
+  Opus = 'musik.Opus',
+--  quelle = { f = 'schubert.quelle', args = { 'sigel' }, opt = '' },
+  seite = 'bereich.seite',
+--  takt = { f = 'bereich.takt', args = { 'bereich' }, opt = '' },
+--  tonart = { f = 'musik.tonart', args = { 'tonart', 'alternative' } },
+}
+
+function Templates:create_shorthands(var_name, templates)
+  for k, v in pairs(templates) do
+    self._shorthands[k] = v
+    tex.print(string.format([[
+      \newcommand{\%s}{\directlua{%s:write('shorthand', '%s')}}]],
+      k, var_name, k))
+  end
+end
+
+function Templates:create_styles(var_name, styles)
+  for k, v in pairs(styles) do
+    self._styles[k] = v
+    tex.print(string.format([=[
+      \newcommand{\%s}[1]{\directlua{%s:write('style', '%s', [[\string#1]])}}]=],
+      k, var_name, k))
+  end
+end
+
 function Templates:format(key, ...)
   local formatter = self:formatter(key)
   if formatter and type(formatter) == 'function' then
@@ -54,17 +152,60 @@ function Templates:format(key, ...)
   end
 end
 
-function Templates:formatter(key)
-  -- first check for Templates method
-  local method = self[key]
-  if method and type(method) == 'function' then return method end
-  -- recursively look into the _formatters table
-  local cur_table = self._formatters
+function Templates:find_node(key, root, create)
+  local cur_node = root
+  local parent_node = root
+  local next_node
   for _, k in ipairs(key:explode('.')) do
-    cur_table = cur_table[k]
-    if not cur_table then return end
+    next_node = cur_node[k]
+    if next_node then
+      parent_node = cur_node
+      cur_node = next_node
+    else
+      if create then
+        cur_node[k] = {}
+        cur_node = cur_node[k]
+      else
+        return
+      end
+    end
   end
-  return cur_table
+  return cur_node
+end
+
+function Templates:find_parent(key, root)
+  local path, k
+  path, k = key:match('(.*)%.(.*)')
+  if path then
+    return self:find_node(path, root, true), k
+  else
+    return root, key
+  end
+end
+
+function Templates:formatter(key)
+  -- first check for builtin formatting method of the Templates class
+  local method = self._builtin_formatters[key]
+  if method then return method end
+  method = self:find_node(key, self._formatters)
+  -- TODO: Search for templates
+  return method
+end
+
+function Templates:list_join(list, separator)
+    -- Is it true that there is no such command in Lua?
+    if #list == 0 then return ''
+    elseif #list == 1 then return list[1]
+    elseif #list == 2 then return list[1]..separator..list[2]
+    else
+        local result = list[1]
+        local index, last = 1, #list
+        repeat
+          index = index + 1
+          result = result .. separator .. list[index]
+        until index == last
+        return result
+    end
 end
 
 --[[
@@ -119,8 +260,9 @@ end
 function Templates:number(text)
   if tonumber(text) or text:find('\\') then return text
   else
-    return self:replace('number-case-' .. template_opts['number-case'], {
-      number = text })
+    return self:format('number-case.' .. template_opts['number-case'], text)
+--    return self:replace('number-case-' .. template_opts['number-case'], {
+--      number = text })
   end
 end
 
@@ -136,18 +278,27 @@ function Templates:range(text)
   end
 end
 
-function Templates:replace(key, data)
+function Templates:_replace(template, data)
   if type(data) ~= 'table' then err(
     string.format('Trying to replace templates with non-table data %s', data)) end
-  local result = self:template(key)
   for k, v in pairs(data) do
-    result = result:gsub('<<<'..k..'>>>', v)
+    template = template:gsub('<<<'..k..'>>>', v)
   end
-  return result
+  return template
+end
+
+function Templates:replace(key, data)
+  return self:_replace(self:template(key), data)
 end
 
 function Templates:set_template(key, template)
-  self._templates[key] = template
+  local parent
+  parent, key = self:find_parent(key, self._templates)
+  parent[key] = template
+end
+
+function Templates:shorthand(key)
+  return self._shorthands[key] or err('Shorthand not defined: '..key)
 end
 
 -- From: http://lua-users.org/wiki/SplitJoin
@@ -194,8 +345,14 @@ function Templates:split_range(text)
   end
 end
 
+function Templates:style(style, text, color)
+  local template = self._styles[style] or err('Style not defined: ' .. style)
+  return self:_replace(template, { text = text })
+end
+
 function Templates:template(key)
-  return self._templates[key] or err(string.format('Template "%s" undefined', key))
+  return self:find_node(key, self._templates)
+  or err(string.format('Template "%s" undefined', key))
 end
 
 function Templates:wrap_kv_option(key, value)
@@ -228,17 +385,24 @@ function Templates:wrap_optional_arg(opt, key)
   end
 end
 
+function Templates:_write(content, color)
+  if template_opts.color and color and color ~= 'nocolor' then
+    if color == 'default' then color = template_opts['default-color'] end
+    content = '\\textcolor{' .. color .. '}{' .. content .. '}'
+  end
+  tex.print(content:explode('\n'))
+end
+
 function Templates:write(key_color, ...)
-  local key, color = key_color, template_opts['default-color']
-  if type(key_color) == 'table' then
+  local key, color
+  if type(key_color) == 'string' then
+    key = key_color
+    color = 'default'
+  else
     key = key_color[1]
     color = key_color[2]
   end
-  local result = self:format(key, ...)
-  if template_opts.color and color ~= 'nocolor' then
-    result = '\\textcolor{' .. color .. '}{' .. result .. '}'
-  end
-  tex.print(result:explode('\n'))
+  self:_write(self:format(key, ...), color)
 end
 
 return Templates
