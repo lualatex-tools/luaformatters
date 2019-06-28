@@ -10,33 +10,49 @@ local err, warn, info, log = luatexbase.provides_module({
 
 local Templates = {}
 
-function Templates:new(templates, formatters)
-  local o = {
-    _templates = templates or {},
-    _formatters = formatters or {},
-    _shorthands = {},
-    _styles = {},
-    _builtin_formatters = {
-      add_element = Templates.add_element,
-      add_superscript = Templates.add_superscript,
-      number = Templates.number,
-      range = Templates.range,
-      shorthand = Templates.shorthand,
-      style = Templates.style,
+function Templates:new(formatters)
+--[[
+    Create a new Templates object.
+    If a `formatters` table is provided, included templates,
+    formatters, shorthands and styles are installed in the object.
+    However, if they are provided later through the `create_NN`
+    commands LaTeX macros can be written automatically (see manual).
+    [TODO: Provide a command to simply insert templates]
+    If no templates or formatters are provided, still a number of
+    built-in formatters can be used from the Templates object.
+--]]
+    formatters = formatters or {}
+    local o = {
+        _templates = formatters.templates or {},
+        _formatters = formatters.formatters or {},
+        _shorthands = formatters.shorthands or {},
+        _styles = formatters.styles or {},
+        _builtin_formatters = {
+            add_element = Templates.add_element,
+            add_superscript = Templates.add_superscript,
+            number = Templates.number,
+            range = Templates.range,
+            shorthand = Templates.shorthand,
+            style = Templates.style,
+        }
     }
-  }
-  o._formatters['number-case'] = {
-    normal = function (self, text) return text end,
-    smallcaps = function (self, text)
-      return string.format([[\textsc{\lowercase{%s}}]], text) end,
-    upper = function (self, text)
-      return string.format([[\uppercase{%s}]], text) end,
-    lower = function (self, text)
-      return string.format([[\lowercase{%s}]], text) end,
-  }
-  setmetatable(o, self)
-  self.__index = self
-  return o
+    o._formatters['number-case'] = {
+        normal = function (self, text)
+            return text
+        end,
+        smallcaps = function (self, text)
+            return string.format([[\textsc{\lowercase{%s}}]], text)
+        end,
+        upper = function (self, text)
+            return string.format([[\uppercase{%s}]], text)
+        end,
+        lower = function (self, text)
+            return string.format([[\lowercase{%s}]], text)
+        end,
+    }
+    setmetatable(o, self)
+    self.__index = self
+    return o
 end
 
 function Templates:add_element(base, element, separator)
