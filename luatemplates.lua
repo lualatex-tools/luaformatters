@@ -255,7 +255,7 @@ function Templates:format(key, ...)
         Trying to format values
         %s
         but no template/formatter found at key
-        %s]], ..., key)
+        %s]], ..., key))
     end
     if type(formatter) == 'function' then
         return formatter(self, ...)
