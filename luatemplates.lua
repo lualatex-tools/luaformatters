@@ -10,23 +10,40 @@ local err, warn, info, log = luatexbase.provides_module({
 
 local Templates = {}
 
-function Templates:new(formatters)
+function Templates:new(var_name, config)
 --[[
     Create a new Templates object.
-    If a `formatters` table is provided, included templates,
+    If a `config` table is provided, included templates,
     formatters, shorthands and styles are installed in the object.
-    However, if they are provided later through the `create_NN`
-    commands LaTeX macros can be written automatically (see manual).
-    [TODO: Provide a command to simply insert templates]
-    If no templates or formatters are provided, still a number of
-    built-in formatters can be used from the Templates object.
+    Specifically, the existing of the following subtables triggers
+    specific actions:
+    - templates
+      installs the included hierarchy of templates.
+      These will be available through the `format()` and `write()` methods.
+    - formatters
+      Like templates, but handles formatting functions.
+    - shorthands
+      Installs the given shorthands as formatters
+      *and creates corresponding LaTeX commands*. The key of each shorthand
+      will be used as the command name.
+    - styles
+      Same as with shorthands. (Styles are formatting functions that expect
+      exactly one argument which is used to replace a '<<<text>>>'
+      template).
+    - mappings
+      Creates complex LaTeX commands accessing available formatters and templates.
+    For details about the three last items refer to the Templates:create_NN
+    methods.
+    If any of these subtables is not provided it can be added later as well.
+    If no templates or formatters are provided, still several of the built-in
+    formatters can be used from the Templates object.
 --]]
-    formatters = formatters or {}
+    config = config or {}
     local o = {
-        _templates = formatters.templates or {},
-        _formatters = formatters.formatters or {},
-        _shorthands = formatters.shorthands or {},
-        _styles = formatters.styles or {},
+        _templates = config.templates or {},
+        _formatters = config.formatters or {},
+        _shorthands = {},
+        _styles = {},
         _builtin_formatters = {
             -- These formatters are generic formatting functions
             -- that should be usable directly from outside.
@@ -46,6 +63,15 @@ function Templates:new(formatters)
     }
     setmetatable(o, self)
     self.__index = self
+    if config.shorthands then
+        self.create_shorthands(o, var_name, config.shorthands)
+    end
+    if config.styles then
+        self.create_styles(o, var_name, config.styles)
+    end
+    if config.mapping then
+        self.create_commands(o, var_name, config.mapping)
+    end
     return o
 end
 
