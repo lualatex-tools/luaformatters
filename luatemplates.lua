@@ -642,14 +642,17 @@ end
 
 function Templates:split_range(text)
 --[[
-
+    Split a string into two fields at the first hyphen, returning 'from' and 'to'.
+    Any further hyphens (even in '--') are given to the 'to' field:
+    '3--4' will yield '3' and '-4'
+    If there is no hyphen 'from' will hold the whole string while 'to' is nil.
 --]]
-  local from, to = text:match('(.-)%-(.*)')
-  if not to then
-    return text, nil
-  else
-    return from, to
-  end
+    local from, to = text:match('(.-)%-(.*)')
+    if not to then
+        return text, nil
+    else
+        return from, to
+    end
 end
 
 function Templates:style(style, text, color)
