@@ -599,7 +599,10 @@ to nonexisting category %s]], key, category))
 end
 
 function Templates:shorthand(key)
-  return self._shorthands[key] or err('Shorthand not defined: '..key)
+--[[
+    Return the string stored as shorthand for the given key.
+--]]
+    return self._shorthands[key] or err('Shorthand not defined: '..key)
 end
 
 -- From: http://lua-users.org/wiki/SplitJoin
