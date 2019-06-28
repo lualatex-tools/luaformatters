@@ -81,75 +81,117 @@ function Templates:add_superscript(base, super, parenthesis)
   return base .. '\\textsuperscript{' .. super .. '}'
 end
 
-function Templates:_create_argument(number)
-    return string.format([["\luatexluaescapestring{\unexpanded{#%s}}"]], number)
+function Templates:create_command(var_name, name, properties)
+--[[
+    Create a single LaTeX command using this object's templates and formatters.
+    - var_name
+      The name of a global variable by which this Templates object can be
+      referenced inside \directlua{}
+    - name
+      The name of the resulting command
+    - properties
+      The properties of the resulting command, either a string or a table.
+      - If it is a string it is considered the key to a formatting method,
+        and a command with *one* argument - which is passed to the formatter -
+        is created. NOTE: This may *not* be a *template* since simple templating
+        commands with one argument are handled through the *styles* mechanism.
+      - If it is a table then it may include mandatory and optional keys:
+        - f (string)[mandatory]
+          The formatter function (identical to the single string above)
+        - color (string)
+          If a color is specified this will be used instead of the `default-color`
+          package option (if the `color` option is true, that is).
+          I `color = 'nocolor'` is given than this command will *never* be
+          wrapped in a \textcolor command - which may be necessary for more
+          complex commands or environments where this wrap might break things.
+        - opt (string)
+          If `opt` is given the command will get an optional argument.
+          The content of this field will be supplied as the default value, so
+          `opt = ''` will result in `[]` while
+          `opt = 'foo=bar'` will give `[foo=bar]`
+        - args (array table)
+          If `args` is given it should be an array with argument names.
+          This array is only used to determine the number of arguments
+          that are passed on to the formatter function while their *names*
+          are ignored. However, it is recommended to use the actual argument
+          names used in the formatter, for documentation purposes.
+        - keys (array table) [TODO: This is not implemented yet]
+          If `keys` is given `args` and `opt` will be ignored and a
+          template replacement command is created instead - so in this case the
+          `f` argument must point to a template rather than a formatter.
+          The keys refer to the keys used in the template, and the command
+          creates as many arguments as there are keys. So from
+              `name = 'mycommand' f = 'my.template' keys = {'foo', 'bar'}`
+          the command will look like
+              `\mycommand[2]{...}`
+          while an invocation
+              `\mycommand{hey}{there}`
+          will result in the call
+              `Templates:write('my.template', { foo = 'hey', bar = 'there' })`
+--]]
+    local formatter, color, arg_num, opt, args = '', '', 0, '', ''
+    local key = properties.f or properties
+    if type(properties) == 'string' then
+        formatter = string.format([['%s']], properties)
+        color = 'default'
+        opt = ''
+        arg_num = '[1]'
+        args = self:_numbered_argument(1)
+    else
+        formatter = string.format([[
+            {'%s','%s'}]], properties.f, properties.color or 'default')
+        args = {}
+        if properties.opt then
+            arg_num = 1
+            opt = string.format('[%s]', properties.opt)
+            table.insert(args, self:_numbered_argument(1))
+        end
+        if properties.args then
+            for _ in ipairs(properties.args) do
+                arg_num = arg_num + 1
+                table.insert(args, string.format(self:_numbered_argument(arg_num)))
+            end
+        end
+        args = self:list_join(args, ', ')
+        if arg_num > 0 then
+            arg_num = string.format('[%s]', arg_num)
+        else
+            arg_num = ''
+        end
+    end
+    if not self:formatter(key) then
+        err(string.format([[
+Trying to create the LaTeX command "\%s"
+but no formatter/template found at key
+"%s"]], name, key))
+    end
+    local result = string.format([[
+    \newcommand{\%s}%s%s{\directlua{%s:write(%s, %s)}}]],
+    name, arg_num, opt, var_name, formatter, args)
+    if k == 'manuskript' then
+        print()
+        print("Generierter Befehl")
+        print(result)
+        --      err("Ende")
+    end
+    tex.print(result) -- TODO: avoid `result` variable after debugging is done
 end
 
 function Templates:create_commands(var_name, map)
-  local opt, arg_num, args, formatter, color
-  for k, v in pairs(map) do
-    arg_num = 0
-    args = ''
-    opt = ''
-    formatter = ''
-    color = ''
-    if type(v) == 'string' then
-      formatter = string.format([['%s']], v)
-      color = 'default'
-      arg_num = '[1]'
-      opt = ''
-      args = self:_create_argument(1) --=[[[\string#1]]]=]
-    else
-      formatter = string.format([[{ '%s', '%s' }]],
-        v.f, v.color or 'default')
-      args = {}
-      if v.opt then
-        arg_num = 1
-        opt = string.format('[%s]', v.opt)
-        table.insert(args, self:_create_argument(1))
-      end
-      if v.args then
-        for i, _ in ipairs(v.args) do
-          arg_num = arg_num + 1
-          table.insert(args, string.format(self:_create_argument(arg_num)))
-        end
-      end
-      args = self:list_join(args, ', ')
-      if arg_num > 0 then
-        arg_num = string.format('[%s]', arg_num)
-      else
-        arg_num = ''
-      end
-    end
-    local result = string.format([[
-\newcommand{\%s}%s%s{\directlua{%s:write(%s, %s)}}]],
-      k, arg_num, opt, var_name, formatter, args)
-    if k == 'manuskript' then
-      print()
-      print("Generierter Befehl")
-      print(result)
---      err("Ende")
-    end
-    tex.print(result)
+--[[
+    Create a number of LaTeX commands based on a mapping table.
+    - var_name
+      The name of a global variable by which this Templates object can be
+      referenced inside \directlua{}
+    - map
+      is a flat table whose keys are the names of the created commands
+      and whose values are the properties of the corresponding command
+      (see Templates:create_command() for details).
+--]]
+  for name, properties in pairs(map) do
+      self:create_command(var_name, name, properties)
   end
 end
-
-local map = {
-  bereich = 'tools.bereich',
-  dv = 'schubert.dv',
---  gedicht = { f = 'gedicht.gedicht', color = 'nocolor', opt = '' },
---  lied = { f = 'schubert.lied', args = { 'titel', 'dv' }, opt = '' },
---  manuskript = { f = 'abb.manuskript', color = 'nocolor', opt = '' },
-  noten = 'musik.noten',
---  notenbeispiel = { f = 'abb.notenbeispiel', color = 'nocolor', opt = '' },
---  nsa = { f = 'schubert.nsa', args = { 'band', 'seiten' }, opt = '' },
-  opus = 'musik.opus',
-  Opus = 'musik.Opus',
---  quelle = { f = 'schubert.quelle', args = { 'sigel' }, opt = '' },
-  seite = 'bereich.seite',
---  takt = { f = 'bereich.takt', args = { 'bereich' }, opt = '' },
---  tonart = { f = 'musik.tonart', args = { 'tonart', 'alternative' } },
-}
 
 function Templates:create_shorthands(var_name, templates)
   for k, v in pairs(templates) do
@@ -312,6 +354,16 @@ function Templates:number(text)
 --    return self:replace('number-case-' .. template_opts['number-case'], {
 --      number = text })
   end
+end
+
+function Templates:_numbered_argument(number)
+--[[
+    Generate a numbered argument for use in a generated LaTeX command.
+    NOTE: From all the ways to protect the `#1` arguments in the
+    \directlua{} invocations this seems to be the only one working in all
+    cases so far. I don't know if there's an “official” way to do this, though.
+--]]
+    return string.format([["\luatexluaescapestring{\unexpanded{#%s}}"]], number)
 end
 
 function Templates:range(text)
