@@ -53,8 +53,10 @@ function Templates:setup(var_name, config)
             add_subscript = Templates.add_subscript,
             add_superscript = Templates.add_superscript,
             case = Templates.case,
+            list_format = Templates.list_format,
             number = Templates.number,
             range = Templates.range,
+            range_list = Templates.range_list,
             -- The following formatters are special functions
             -- handling the auto-generated shorthands and styles
             shorthand = Templates.shorthand,
@@ -567,6 +569,15 @@ function Templates:range(text, options)
         local range_sep = options['range-sep'] or template_opts['range-sep']
         return self:number(from) .. range_sep .. self:number(to)
     end
+end
+
+function Templates:range_list(text)
+--[[
+    Format a list using 'range' as the formatter.
+    This is to make the range list (e.g. for page ranges) easily accessible
+    as a built-in formatter.
+--]]
+    return self:list_format(text, { formatter = 'range' })
 end
 
 function Templates:_replace(template, data)
