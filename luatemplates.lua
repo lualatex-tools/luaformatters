@@ -736,17 +736,26 @@ end
 
 function Templates:wrap_macro(macro, value)
 --[[
-    If value is not empty return it wrapped in a macro, else an empty string.
-    'macro' is a macro name without the leading backslash:
-    'mymacro', 'myvalue' will return \mymacro{myvalue}
-    TODO: Support a value *list*, creating multiple arguments, including an
-    optional one.
+    Wrap one or multiple values in a macro invocation.
+    - macro (string)
+      The name of the macro
+    - value (string or table)
+      One or multiple values. An empty string or nil causes one single argument
+      (or delimiter) to be created:
+      'mymacro', '' => \mymacro{}
+      Multiple values are mapped to multiple arguments:
+      'mymacro', { 'one', 'two', 'three' } => \mymacro{one}{two}{three}
 --]]
-    if value and value ~= '' then
-        return string.format([[\%s{%s}]], macro, value)
-    else
-        return ''
+    local result = string.format([[\%s]], macro)
+    if not value then
+        value = { '' }
+    elseif type(value) == 'string' then
+        value = { value }
     end
+    for _, v in ipairs(value) do
+        result = result .. string.format('{%s}', v)
+    end
+    return result
 end
 
 function Templates:wrap_optional_arg(opt, key)
@@ -759,11 +768,11 @@ function Templates:wrap_optional_arg(opt, key)
 end
 
 function Templates:_write(content, color)
-  if template_opts.color and color and color ~= 'nocolor' then
-    if color == 'default' then color = template_opts['default-color'] end
-    content = '\\textcolor{' .. color .. '}{' .. content .. '}'
-  end
-  tex.print(content:explode('\n'))
+    if template_opts.color and color ~= 'nocolor' then
+        if color == 'default' then color = template_opts['default-color'] end
+        content = self:wrap_macro('textcolor', { color, content })
+    end
+    tex.print(content:explode('\n'))
 end
 
 function Templates:write(key_color, ...)
