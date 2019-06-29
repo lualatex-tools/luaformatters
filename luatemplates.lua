@@ -758,13 +758,16 @@ function Templates:wrap_macro(macro, value)
     return result
 end
 
-function Templates:wrap_optional_arg(opt, key)
-  if type(opt) == 'table' then opt = opt[key] end
-  if opt and opt ~= '' then
-    return '['..opt..']'
-  else
-    return ''
-  end
+function Templates:wrap_optional_arg(opt)
+--[[
+    Wrap an optional argument in square brackets if it is provided,
+    otherwise return an empty string.
+--]]
+    if opt and opt ~= '' then
+        return '['..opt..']'
+    else
+        return ''
+    end
 end
 
 function Templates:_write(content, color)
