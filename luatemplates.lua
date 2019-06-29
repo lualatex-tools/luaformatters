@@ -157,7 +157,7 @@ function Templates:create_command(var_name, name, properties)
         - color (string)
           If a color is specified this will be used instead of the `default-color`
           package option (if the `color` option is true, that is).
-          I `color = 'nocolor'` is given than this command will *never* be
+          If `color = 'nocolor'` is given than this command will *never* be
           wrapped in a \textcolor command - which may be necessary for more
           complex commands or environments where this wrap might break things.
         - opt (string)
@@ -221,16 +221,9 @@ Trying to create the LaTeX command "\%s"
 but no formatter/template found at key
 "%s"]], name, key))
     end
-    local result = string.format([[
+    tex.print(string.format([[
     \newcommand{\%s}%s%s{\directlua{%s:write(%s, %s)}}]],
-    name, arg_num, opt, var_name, formatter, args)
-    if k == 'manuskript' then
-        print()
-        print("Generierter Befehl")
-        print(result)
-        --      err("Ende")
-    end
-    tex.print(result) -- TODO: avoid `result` variable after debugging is done
+    name, arg_num, opt, var_name, formatter, args))
 end
 
 function Templates:create_commands(var_name, map)
