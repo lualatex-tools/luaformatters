@@ -10,7 +10,7 @@ local err, warn, info, log = luatexbase.provides_module({
 
 local Templates = {}
 
-function Templates:new(var_name, config)
+function Templates:setup(var_name, config)
 --[[
     Create a new Templates object.
     If a `config` table is provided, included templates,
@@ -72,6 +72,7 @@ function Templates:new(var_name, config)
     if config.mapping then
         self.create_commands(o, var_name, config.mapping)
     end
+    _G[var_name] = o
     return o
 end
 
