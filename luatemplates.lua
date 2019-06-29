@@ -719,11 +719,19 @@ is not a template but a function.]], key))
 end
 
 function Templates:wrap_kv_option(key, value)
-  if value and value ~= '' then
-    return string.format([[%s={%s}]], key, value)
-  else
-    return ''
-  end
+--[[
+    Process a key/value pair to be used as a key/value option.
+    If a value is provided return 'key={value}' to protect the value from
+    possible commas misleading a parser. If no value is provided return the key
+    alone.
+    In order to provide this as a complete optional argument use
+    Templates:wrap_optional_arg on the result.
+--]]
+    if value and value ~= '' then
+        return string.format([[%s={%s}]], key, value)
+    else
+        return key
+    end
 end
 
 function Templates:wrap_macro(macro, value)
