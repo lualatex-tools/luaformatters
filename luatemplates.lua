@@ -771,6 +771,13 @@ function Templates:wrap_optional_arg(opt)
 end
 
 function Templates:_write(content, color)
+--[[
+    Write some content to the TeX document and optionally color it.
+    Use a color when all of the following conditions are met:
+    * the 'color' package option is set
+    * A color package has been loaded TODO: Not implemented yet
+    * The given color is not 'nocolor'
+--]]
     if template_opts.color and color ~= 'nocolor' then
         if color == 'default' then color = template_opts['default-color'] end
         content = self:wrap_macro('textcolor', { color, content })
@@ -779,15 +786,26 @@ function Templates:_write(content, color)
 end
 
 function Templates:write(key_color, ...)
-  local key, color
-  if type(key_color) == 'string' then
-    key = key_color
-    color = 'default'
-  else
-    key = key_color[1]
-    color = key_color[2]
-  end
-  self:_write(self:format(key, ...), color)
+--[[
+    Process some data using a formatter and write it to the TeX document.
+    - key_color (string or table)
+      Either a string key pointing to a formatter (template/function)
+      or a table with such a key and a color.
+      If a simple key is given color defaults to 'default' (using the package option).
+    - ...
+      All remaining arguments are passed on to the formatter.
+      NOTE: If the formatter is a template string, there must be exactly one
+      further argument with a table specifying the key/value replacements.
+--]]
+    local key, color
+    if type(key_color) == 'string' then
+        key = key_color
+        color = 'default'
+    else
+        key = key_color[1]
+        color = key_color[2]
+    end
+    self:_write(self:format(key, ...), color)
 end
 
 return Templates
