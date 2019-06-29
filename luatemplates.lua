@@ -52,7 +52,9 @@ function Templates:setup(var_name, config)
             add_element = Templates.add_element,
             add_subscript = Templates.add_subscript,
             add_superscript = Templates.add_superscript,
+            bold = Templates.bold,
             case = Templates.case,
+            italic = Templates.italic,
             list_format = Templates.list_format,
             number = Templates.number,
             range = Templates.range,
@@ -122,6 +124,13 @@ function Templates:add_superscript(base, super, parenthesis)
     Add a superscript the the given base string.
 --]]
     return self:_add_ssscript('super', base, super, parenthesis)
+end
+
+function Templates:bold(text)
+--[[
+    Make text bold
+--]]
+    return self:wrap_macro('textbf', text)
 end
 
 function Templates:case(case, text)
@@ -428,6 +437,13 @@ function Templates:formatter(key)
         result = self:find_node(key, root)
         if result then return result end
     end
+end
+
+function Templates:italic(text)
+--[[
+    Make the given text italic
+--]]
+    return self:wrap_macro('textit', text)
 end
 
 function Templates:list_format(text, options)
