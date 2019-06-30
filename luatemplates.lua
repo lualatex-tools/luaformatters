@@ -40,6 +40,7 @@ function Templates:setup(var_name, config)
 --]]
     config = config or {}
     local o = {
+        _name = var_name,
         _templates = config.templates or {},
         _formatters = config.formatters or {},
         _shorthands = {},
@@ -68,13 +69,13 @@ function Templates:setup(var_name, config)
     setmetatable(o, self)
     self.__index = self
     if config.shorthands then
-        self.create_shorthands(o, var_name, config.shorthands)
+        self.create_shorthands(o, config.shorthands)
     end
     if config.styles then
-        self.create_styles(o, var_name, config.styles)
+        self.create_styles(o, config.styles)
     end
     if config.mapping then
-        self.create_commands(o, var_name, config.mapping)
+        self.create_commands(o, config.mapping)
     end
     _G[var_name] = o
     return o
@@ -148,12 +149,9 @@ function Templates:case(case, text)
     return string.format(templates[case], text)
 end
 
-function Templates:create_command(var_name, name, properties)
+function Templates:create_command(name, properties)
 --[[
     Create a single LaTeX command using this object's templates and formatters.
-    - var_name
-      The name of a global variable by which this Templates object can be
-      referenced inside \directlua{}
     - name
       The name of the resulting command
     - properties
@@ -234,31 +232,25 @@ but no formatter/template found at key
     end
     tex.print(string.format([[
     \newcommand{\%s}%s%s{\directlua{%s:write(%s, %s)}}]],
-    name, arg_num, opt, var_name, formatter, args))
+    name, arg_num, opt, self._name, formatter, args))
 end
 
-function Templates:create_commands(var_name, map)
+function Templates:create_commands(map)
 --[[
     Create a number of LaTeX commands based on a mapping table.
-    - var_name
-      The name of a global variable by which this Templates object can be
-      referenced inside \directlua{}
     - map
       is a flat table whose keys are the names of the created commands
       and whose values are the properties of the corresponding command
       (see Templates:create_command() for details).
 --]]
   for name, properties in pairs(map) do
-      self:create_command(var_name, name, properties)
+      self:create_command(name, properties)
   end
 end
 
-function Templates:create_shorthand(var_name, key, template)
+function Templates:create_shorthand(key, template)
 --[[
     Create a “shorthand” LaTeX command.
-    - var_name
-      The name of a global variable by which this Templates object can be
-      referenced inside \directlua{}
     - `key`
       will be the name of the command
     - `template`
@@ -274,31 +266,25 @@ function Templates:create_shorthand(var_name, key, template)
     self._shorthands[key] = template
     tex.print(string.format([[
 \newcommand{\%s}{\directlua{%s:write({ 'shorthand', '%s' }, '%s')}}]],
-      key, var_name, color, key))
+      key, self._name, color, key))
 end
 
-function Templates:create_shorthands(var_name, templates)
+function Templates:create_shorthands(templates)
 --[[
     Create multiple “shorthand” LaTeX commands.
-    - var_name
-      The name of a global variable by which this Templates object can be
-      referenced inside \directlua{}
     - templates
       table with templates (see Templates:create_shorthand)
 --]]
     for key, result in pairs(templates) do
-        self:create_shorthand(var_name, key, result)
+        self:create_shorthand(key, result)
     end
 end
 
-function Templates:create_style(var_name, key, template)
+function Templates:create_style(key, template)
 --[[
     Create a “style” LaTeX command.
     Styles are regular character styles but can be anything where a single
     argument is replaced with some text.
-    - var_name
-      The name of a global variable by which this Templates object can be
-      referenced inside \directlua{}
     - `key`
       will be the name of the command
     - `template`
@@ -322,20 +308,17 @@ but template does not include "<<<text>>>":
     self._styles[key] = template
     tex.print(string.format([=[
         \newcommand{\%s}[1]{\directlua{%s:write({ 'style', '%s' }, '%s', %s)}}]=],
-        key, var_name, color, key, self:_numbered_argument(1)))
+        key, self._name, color, key, self:_numbered_argument(1)))
 end
 
-function Templates:create_styles(var_name, styles)
+function Templates:create_styles(styles)
     --[[
         Create multiple “style” LaTeX commands.
-        - var_name
-          The name of a global variable by which this Templates object can be
-          referenced inside \directlua{}
         - templates
           table with templates (see Templates:create_style)
     --]]
     for key, template in pairs(styles) do
-        self:create_style(var_name, key, template)
+        self:create_style(key, template)
     end
 end
 
