@@ -41,10 +41,8 @@ function Templates:setup(var_name, config)
     config = config or {}
     local o = {
         _name = var_name,
-        _templates = config.templates or {},
-        _formatters = config.formatters or {},
-        _shorthands = {},
-        _styles = {},
+        _macro_prefix = config.prefix or '',
+        _namespace = config.namespace or {},
         _builtin_formatters = {
             -- These formatters are generic formatting functions
             -- that should be usable directly from outside.
@@ -68,6 +66,12 @@ function Templates:setup(var_name, config)
     }
     setmetatable(o, self)
     self.__index = self
+    for _, category in pairs({'shorthands', 'styles', 'templates', 'formatters'}) do
+        local root = config[category]
+        if root then
+            self.assign_formatters(o, o._namespace, root)
+        end
+    end
     if config.shorthands then
         self.create_shorthands(o, config.shorthands)
     end
@@ -79,6 +83,32 @@ function Templates:setup(var_name, config)
     end
     _G[var_name] = o
     return o
+end
+
+function Templates:assign_formatters(target, source)
+--[[
+    Recursively assign formatters from one category
+    to the namespace.
+--]]
+    for k, v in pairs(source) do
+        if target[k] then
+            --[[
+                key is found in namespace,
+                so go down one level in the hierarchy.
+                NOTE: This will fail if k does not refer to a namespace node
+                but to a formatter already defined in an earlier category.
+                TODO: Is there a way to check this condition to prevent
+                really obscure errors?
+            --]]
+            self:assign_formatters(target[k], v)
+        else
+            --[[
+                Key is *not* found in namespace, so we assume it's a formatter.
+                This must be a valid formatter function or template.
+            --]]
+            target[k] = v
+        end
+    end
 end
 
 function Templates:add_element(base, element, separator)
@@ -263,7 +293,7 @@ function Templates:create_shorthand(key, template)
         color = template[2]
         template = template[1]
     end
-    self._shorthands[key] = template
+    self:find_parent(key, self._namespace)[key] = template
     tex.print(string.format([[
 \newcommand{\%s}{\directlua{%s:write({ 'shorthand', '%s' }, '%s')}}]],
       key, self._name, color, key))
@@ -305,7 +335,7 @@ Trying to create style "%s"
 but template does not include "<<<text>>>":
 %s]], key, template))
     end
-    self._styles[key] = template
+    self:find_parent(key, self._namespace)[key] = template
     tex.print(string.format([=[
         \newcommand{\%s}[1]{\directlua{%s:write({ 'style', '%s' }, '%s', %s)}}]=],
         key, self._name, color, key, self:_numbered_argument(1)))
@@ -412,10 +442,7 @@ function Templates:formatter(key)
     local result
     for _, root in ipairs{
         self._builtin_formatters,
-        self._formatters,
-        self._shorthands,
-        self._styles,
-        self._templates
+        self._namespace,
     } do
         result = self:find_node(key, root)
         if result then return result end
@@ -646,7 +673,7 @@ function Templates:shorthand(key)
 --[[
     Return the string stored as shorthand for the given key.
 --]]
-    return self._shorthands[key] or err('Shorthand not defined: '..key)
+    return self:formatter(key) or err('Shorthand not defined: '..key)
 end
 
 
@@ -705,7 +732,7 @@ function Templates:style(style, text)
     - style
       must refer to a stored style.
 --]]
-    local template = self._styles[style] or err('Style not defined: ' .. style)
+    local template = self:formatter(style) or err('Style not defined: ' .. style)
     return self:_replace(template, { text = text })
 end
 
@@ -714,7 +741,7 @@ function Templates:template(key)
     Retrieve a template for the given key.
     Raise an error if no template is defined or if a function is found instead.
 --]]
-    local result = self:find_node(key, self._templates) or err(string.format('Template "%s" undefined', key))
+    local result = self:formatter(key) or err(string.format('Template "%s" undefined', key))
     if type(result) == 'string' then
         return result
     else
