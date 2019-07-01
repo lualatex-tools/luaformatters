@@ -486,7 +486,9 @@ function Templates:list_join(list, options)
      the given separator, last_sep or ', '. If it is *not* given the default
      is the regular separator.
     TODO: integrate/emulate biblatex's handling of compressing long lists.
-    NOTE: Is it really true that there is no such command in Lua?
+    NOTE: table.concat mostly does the same but doesn't provide the option
+    for a different last separator. Considering that list compression is also
+    planned it seems OK to do it manually.
 --]]
     local options = options or {}
     local sep = options.separator or ', '
