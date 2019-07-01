@@ -9,6 +9,7 @@ local err, warn, info, log = luatexbase.provides_module({
 })
 
 local Templates = {}
+local Builtins = {}
 
 function Templates:setup(var_name, config)
 --[[
@@ -44,28 +45,16 @@ function Templates:setup(var_name, config)
         _macro_prefix = config.prefix or '',
         _namespace = config.namespace or {},
         _builtin_formatters = {
-            -- These formatters are generic formatting functions
-            -- that should be usable directly from outside.
-            -- Just keep in mind that they expect a first `self`
-            -- argument that should point to the Templates table.
-            add_element = Templates.add_element,
-            add_subscript = Templates.add_subscript,
-            add_superscript = Templates.add_superscript,
-            bold = Templates.bold,
-            case = Templates.case,
-            italic = Templates.italic,
-            list_format = Templates.list_format,
-            number = Templates.number,
-            range = Templates.range,
-            range_list = Templates.range_list,
             -- The following formatters are special functions
             -- handling the auto-generated shorthands and styles
+            -- TODO: Probably these are obsolete when the generic command
+            -- creation is implemented.
             shorthand = Templates.shorthand,
             style = Templates.style,
         }
     }
     setmetatable(o, self)
-    self.__index = self
+    self.__index = function (_, key) return self[key] or Builtins[key] end
     for _, category in pairs({'shorthands', 'styles', 'templates', 'formatters'}) do
         local root = config[category]
         if root then
@@ -109,74 +98,6 @@ function Templates:assign_formatters(target, source)
             target[k] = v
         end
     end
-end
-
-function Templates:add_element(base, element, separator)
---[[
-    Built-in formatter:
-    Add an element to a base string, using either the separator
-    specified by the package options or a given one.
---]]
-    if base == '' then
-        return element
-    else
-        local sep = separator or template_opts['element-separator']
-        if not separator then
-            warn([[
-Bug:
-Add_element swallows spaces
-from option-provided separator!]])
-        end
-        return base .. sep .. element
-    end
-end
-
-function Templates:_add_ssscript(direction, base, element, parenthesis)
---[[
-    Add a super- or subscript to the given base string.
-    If `element` is not given or an empty string, no action is taken.
-    If `parenthesis` is a true value the super/subscript is wrapped in
-    parentheses.
---]]
-    if not (element and element ~= '') then return base end
-    if parenthesis then element = '(' .. element .. ')' end
-    return base .. self:wrap_macro('text'..direction..'script', element)
-end
-
-function Templates:add_subscript(base, super, parenthesis)
---[[
-    Add a subscript the the given base string.
---]]
-    return self:_add_ssscript('sub', base, super, parenthesis)
-end
-
-function Templates:add_superscript(base, super, parenthesis)
---[[
-    Add a superscript the the given base string.
---]]
-    return self:_add_ssscript('super', base, super, parenthesis)
-end
-
-function Templates:bold(text)
---[[
-    Make text bold
---]]
-    return self:wrap_macro('textbf', text)
-end
-
-function Templates:case(case, text)
---[[
-    Format text according to a given case strategy.
-    TODO: Maybe add camelcasing or other more advanced features?
---]]
-    local templates = {
-        normal = '%s',
-        allsmallcaps = [[\textsc{\lowercase{%s}}]],
-        smallcaps = [[\textsc{%s}]],
-        upper = [[\uppercase{%s}]],
-        lower = [[\lowercase{%s}]]
-    }
-    return string.format(templates[case], text)
 end
 
 function Templates:create_command(name, properties)
@@ -414,10 +335,20 @@ end
 
 function Templates:format(key, ...)
 --[[
-    Format and return the given data
-    using either template replacement or a formatting function.
-    NOTE: if `key` points to a *template* ... must be exactly
-    one table holding the replacement pairs.
+    Format and return the given data using a formatter addressed by `key`.
+    Produces an error if no formatter can be found for the key.
+    NOTE:
+    - if `key` points to a *function* :
+      - ... is passed on to it as its argument(s)
+      - a `self` argument is passed to the function and points to the
+        current `Templates` object.
+      - the function is expected to return a string.
+    - if `key` points to a *template*:
+      - ... must be one out of:
+        - a table mapping field names to values for the replacment
+          (which have to match the fields in the template)
+        - a string, which will be replaced with the first field found
+          in the template.
 --]]
     local formatter = self:formatter(key)
     if not formatter then
@@ -441,113 +372,13 @@ function Templates:formatter(key)
 --]]
     local result
     for _, root in ipairs{
-        self._builtin_formatters,
+        Builtins,
+        self._builtin_formatters, -- TODO: Remove when obsolete
         self._namespace,
     } do
         result = self:find_node(key, root)
         if result then return result end
     end
-end
-
-function Templates:italic(text)
---[[
-    Make the given text italic
---]]
-    return self:wrap_macro('textit', text)
-end
-
-function Templates:list_format(text, options)
---[[
-    Format a list specified from a BibTeX-style list field.
-    `text` is parsed as a list from a single text.
-    By default input is parsed using the separator ' and ',
-    the output separators are specified with the 'list-sep' and
-    the 'list-last-sep' package options.
-    If an option table is given it may contain the following options:
-    - input_separator
-      Change the parsing behaviour (in case 'and' is valid part of an input element)
-    - separator
-      separator to be used for all but the last element pairs
-    - last_sep
-      separator to be used for the last element pair
-    TODO: incorporate biblatex's list compressing behaviour
-    - formatter
-      If a formatter is given as an option every list element is passed to
-      that (similar to the `map` construct in some programming languages).
-      formatter may be either a key (as passed to Templates:formatter()) or an
-      actual function. The returned formatter must accept exactly one argument,
-      so the registered 'styles' may be good formatters. Some of the built-in
-      formatters are also suitable, maybe the most-used formatter is 'range'
-      (see Templates:range) or 'number' (see Templates:number).
---]]
-    if not text or text == ''  then return '' end
-    options = options or {}
-
-    local elements = self:split_list(text, options.input_separator or ' and ')
-    local formatter = options.formatter
-    if formatter then
-        for i, elt in ipairs(elements) do
-            if type(formatter) == 'function' then
-                elements[i] = formatter(self, elt)
-            else
-                elements[i] = self:format(formatter, elt)
-            end
-        end
-    end
-    return self:list_join(elements, {
-        separator = options.separator or template_opts['list-sep'],
-        last_sep = options.last_sep or template_opts['list-last-sep'],
-    })
-end
-
-function Templates:list_join(list, options)
---[[
-    Join a list of strings with ', '.
-    If the list is empty an empty string is returned.
-    If the list consists of one element this is returned as-is.
-    With `options` the behaviour can be changed:
-    - options.separator
-      specifies a different separator for all but the last join
-    - options.last_sep
-      specifies the separator between the last two elements.
-     the given separator, last_sep or ', '. If it is *not* given the default
-     is the regular separator.
-    TODO: integrate/emulate biblatex's handling of compressing long lists.
-    NOTE: table.concat mostly does the same but doesn't provide the option
-    for a different last separator. Considering that list compression is also
-    planned it seems OK to do it manually.
---]]
-    local options = options or {}
-    local sep = options.separator or ', '
-    local last_sep = options.last_sep or sep
-    if #list == 0 then return ''
-    elseif #list == 1 then return list[1]
-    elseif #list == 2 then return list[1]..last_sep..list[2]
-    else
-        local result = list[1]
-        local index, last = 1, #list
-        repeat
-            index = index + 1
-            result = result..sep..list[index]
-        until index == last - 1
-        return result..last_sep..list[last]
-    end
-end
-
-function Templates:number(text, options)
---[[
-    Format numbers (WIP), including handling case for roman numerals.
-    If `text` is either a simple number or contains a '\' (in which
-    case it is considered a custom-formatted text) it is returned as-is,
-    otherwise the case (only useful for roman numerals, e.g. in paginations)
-    will be processed according to the 'number-case' package option or the
-    'number-case' option in the passed `options`.
---]]
-    options = options or {}
-    if tonumber(text) or text:find('\\') then return text end
-    return self:format('case',
-        options['number-case'] or template_opts['number-case'],
-        text)
 end
 
 function Templates:_numbered_argument(number)
@@ -560,59 +391,17 @@ function Templates:_numbered_argument(number)
     return string.format([["\luatexluaescapestring{\unexpanded{#%s}}"]], number)
 end
 
-function Templates:range(text, options)
---[[
-    Parse and format a range (useful e.g. for pagination commands).
-    A range is first considered as a string with one hyphen in it. This is split in
-    two at the *first* hyphen, any subsequent hyphens (also when the range is written as
-    3--4) will be part of the second part.
-    The two parts are consider as 'from' and 'to'.
-    If there is no hyphen the text is considered as a single element/number, without a 'to'.
-    Each element may be one out of:
-    - numbers
-      => anything that Lua's `tonumber` function accepts as a number
-    - roman numerals
-      depending on the package option 'number-case' these are left as they are or processed
-      to a consistent case.
-      NOTE: This affects *any* text, which may or may not be desirable/acceptable
-    - LaTeX-formatted text. If any '\' is found the part is left untouched.
-    - 'f' or 'ff' ('to' part only)
-      If the 'to' part is 'f' or 'ff' it is replaced with the value of the
-      'range-follow' or 'fange-ffollow' option, by default 'f.' and 'ff.', while
-      the range separator is suppressed
-    The range separator is controlled by the 'range-sep' package option,
-    which by default is '--'.
-    The package options can also be overridden by the optional `options` table.
-    --]]
-    options = options or {}
-    local from, to = self:split_range(text)
-    if not to then return self:number(text)
-    elseif to == 'f' then
-        local range_follow = options['range-follow'] or template_opts['range-follow']
-        return self:number(from) .. range_follow
-    elseif to == 'ff' then
-        local range_ffollow = options['range-ffollow'] or template_opts['range-ffollow']
-        return self:number(from) .. range_ffollow
-    else
-        local range_sep = options['range-sep'] or template_opts['range-sep']
-        return self:number(from) .. range_sep .. self:number(to)
-    end
-end
-
-function Templates:range_list(text)
---[[
-    Format a list using 'range' as the formatter.
-    This is to make the range list (e.g. for page ranges) easily accessible
-    as a built-in formatter.
---]]
-    return self:list_format(text, { formatter = 'range' })
-end
-
 function Templates:_replace(template, data)
 --[[
     Replace the fields in the given template with data from the given table.
     Fields are defined by a keyword enclosed by three pairs of angled brackets.
     The keywords must not contain hyphens and should be limited to alphabetic characters.
+--]]
+
+--[[
+    TODO:
+    accept string as argument and replace it with the first field found in the
+    template.
 --]]
     if type(data) ~= 'table' then
         err(string.format([[
@@ -639,39 +428,10 @@ function Templates:replace(key, data)
     return self:_replace(self:template(key), data)
 end
 
-function Templates:set_formatter(category, key, formatter)
---[[
-    Install one or multiple formatters in the Templates object.
-    - category (string)
-      One out of
-      - templates
-      - formatters
-      - shorthands
-      - styles
-    A 'formatter' is stored in position `key` in that table.
-    - key
-      May be either a simple key or a dot-list notation pointing
-      to a place in the hierachy. Nodes are created if necessary.
-    - formatter (string, function, table)
-      May be either a string template (in templates, shorthands or styles)
-      or a formatter function (in formatters).
-      It can also be a table providing multiple formatters that
-      will extend the category's hierarchy.
-    NOTE: This will *not* create LaTeX commands but only make the formatter(s)
-    available. Usually it should be preferrable to either provide formatter(s)
-    through the `create_NN` commands or in Templates:new. If they are intended
-    to be available from other formatting functions it may be more
-    straightforward to simply write toplevel methods for the Templates object.
---]]
-    local parent = self['_'..category] or err(string.format([[
-Trying to set formatter "%s"
-to nonexisting category %s]], key, category))
-    parent[key] = formatter
-end
-
 function Templates:shorthand(key)
 --[[
     Return the string stored as shorthand for the given key.
+    TODO: Check if it can be removed or moved to Builtins
 --]]
     return self:formatter(key) or err('Shorthand not defined: '..key)
 end
@@ -679,7 +439,7 @@ end
 
 function Templates:split_list(str, pat)
 --[[
-    Split a string into a list at the given pattern
+    Split a string into a list at the given pattern.
     Built upon: http://lua-users.org/wiki/SplitJoin
 --]]
     local t = {}
@@ -731,6 +491,7 @@ function Templates:style(style, text)
     Apply a style to the given text.
     - style
       must refer to a stored style.
+    TODO: Check if this can be removed or moved to Builtins
 --]]
     local template = self:formatter(style) or err('Style not defined: ' .. style)
     return self:_replace(template, { text = text })
@@ -840,5 +601,226 @@ function Templates:write(key_color, ...)
     end
     self:_write(self:format(key, ...), color)
 end
+
+
+
+function Builtins:_add_ssscript(direction, base, element, parenthesis)
+--[[
+    Add a super- or subscript to the given base string.
+    If `element` is not given or an empty string, no action is taken.
+    If `parenthesis` is a true value the super/subscript is wrapped in
+    parentheses.
+--]]
+    if not (element and element ~= '') then return base end
+    if parenthesis then element = '(' .. element .. ')' end
+    return base .. self:wrap_macro('text'..direction..'script', element)
+end
+
+function Builtins:add_subscript(base, super, parenthesis)
+--[[
+    Add a subscript the the given base string.
+--]]
+    return self:_add_ssscript('sub', base, super, parenthesis)
+end
+
+function Builtins:add_superscript(base, super, parenthesis)
+--[[
+    Add a superscript the the given base string.
+--]]
+    return self:_add_ssscript('super', base, super, parenthesis)
+end
+
+function Builtins:add_element(base, element, separator)
+--[[
+    Built-in formatter:
+    Add an element to a base string, using either the separator
+    specified by the package options or a given one.
+--]]
+    if base == '' then
+        return element
+    else
+        local sep = separator or template_opts['element-separator']
+        if not separator then
+            warn([[
+Bug:
+Add_element swallows spaces
+from option-provided separator!]])
+        end
+        return base .. sep .. element
+    end
+end
+
+function Builtins:bold(text)
+--[[
+    Make text bold
+--]]
+    return self:wrap_macro('textbf', text)
+end
+
+function Builtins:case(case, text)
+--[[
+    Format text according to a given case strategy.
+    TODO: Maybe add camelcasing or other more advanced features?
+--]]
+    local templates = {
+        normal = '%s',
+        allsmallcaps = [[\textsc{\lowercase{%s}}]],
+        smallcaps = [[\textsc{%s}]],
+        upper = [[\uppercase{%s}]],
+        lower = [[\lowercase{%s}]]
+    }
+    return string.format(templates[case], text)
+end
+
+function Templates:italic(text)
+--[[
+    Make the given text italic
+--]]
+    return self:wrap_macro('textit', text)
+end
+
+function Builtins:list_format(text, options)
+--[[
+    Format a list specified from a BibTeX-style list field.
+    `text` is parsed as a list from a single text.
+    By default input is parsed using the separator ' and ',
+    the output separators are specified with the 'list-sep' and
+    the 'list-last-sep' package options.
+    If an option table is given it may contain the following options:
+    - input_separator
+      Change the parsing behaviour (in case 'and' is valid part of an input element)
+    - separator
+      separator to be used for all but the last element pairs
+    - last_sep
+      separator to be used for the last element pair
+    TODO: incorporate biblatex's list compressing behaviour
+    - formatter
+      If a formatter is given as an option every list element is passed to
+      that (similar to the `map` construct in some programming languages).
+      formatter may be either a key (as passed to Templates:formatter()) or an
+      actual function. The returned formatter must accept exactly one argument,
+      so the registered 'styles' may be good formatters. Some of the built-in
+      formatters are also suitable, maybe the most-used formatter is 'range'
+      (see Templates:range) or 'number' (see Templates:number).
+--]]
+    if not text or text == ''  then return '' end
+    options = options or {}
+
+    local elements = self:split_list(text, options.input_separator or ' and ')
+    local formatter = options.formatter
+    if formatter then
+        for i, elt in ipairs(elements) do
+            if type(formatter) == 'function' then
+                elements[i] = formatter(self, elt)
+            else
+                elements[i] = self:format(formatter, elt)
+            end
+        end
+    end
+    return self:list_join(elements, {
+        separator = options.separator or template_opts['list-sep'],
+        last_sep = options.last_sep or template_opts['list-last-sep'],
+    })
+end
+
+function Builtins:list_join(list, options)
+--[[
+    Join a list of strings with ', '.
+    If the list is empty an empty string is returned.
+    If the list consists of one element this is returned as-is.
+    With `options` the behaviour can be changed:
+    - options.separator
+      specifies a different separator for all but the last join
+    - options.last_sep
+      specifies the separator between the last two elements.
+     the given separator, last_sep or ', '. If it is *not* given the default
+     is the regular separator.
+    TODO: integrate/emulate biblatex's handling of compressing long lists.
+    NOTE: table.concat mostly does the same but doesn't provide the option
+    for a different last separator. Considering that list compression is also
+    planned it seems OK to do it manually.
+--]]
+    local options = options or {}
+    local sep = options.separator or ', '
+    local last_sep = options.last_sep or sep
+    if #list == 0 then return ''
+    elseif #list == 1 then return list[1]
+    elseif #list == 2 then return list[1]..last_sep..list[2]
+    else
+        local result = list[1]
+        local index, last = 1, #list
+        repeat
+            index = index + 1
+            result = result..sep..list[index]
+        until index == last - 1
+        return result..last_sep..list[last]
+    end
+end
+
+function Builtins:number(text, options)
+--[[
+    Format numbers (WIP), including handling case for roman numerals.
+    If `text` is either a simple number or contains a '\' (in which
+    case it is considered a custom-formatted text) it is returned as-is,
+    otherwise the case (only useful for roman numerals, e.g. in paginations)
+    will be processed according to the 'number-case' package option or the
+    'number-case' option in the passed `options`.
+--]]
+    options = options or {}
+    if tonumber(text) or text:find('\\') then return text end
+    return self:format('case',
+        options['number-case'] or template_opts['number-case'],
+        text)
+end
+
+function Builtins:range(text, options)
+--[[
+    Parse and format a range (useful e.g. for pagination commands).
+    A range is first considered as a string with one hyphen in it. This is split in
+    two at the *first* hyphen, any subsequent hyphens (also when the range is written as
+    3--4) will be part of the second part.
+    The two parts are consider as 'from' and 'to'.
+    If there is no hyphen the text is considered as a single element/number, without a 'to'.
+    Each element may be one out of:
+    - numbers
+      => anything that Lua's `tonumber` function accepts as a number
+    - roman numerals
+      depending on the package option 'number-case' these are left as they are or processed
+      to a consistent case.
+      NOTE: This affects *any* text, which may or may not be desirable/acceptable
+    - LaTeX-formatted text. If any '\' is found the part is left untouched.
+    - 'f' or 'ff' ('to' part only)
+      If the 'to' part is 'f' or 'ff' it is replaced with the value of the
+      'range-follow' or 'fange-ffollow' option, by default 'f.' and 'ff.', while
+      the range separator is suppressed
+    The range separator is controlled by the 'range-sep' package option,
+    which by default is '--'.
+    The package options can also be overridden by the optional `options` table.
+    --]]
+    options = options or {}
+    local from, to = self:split_range(text)
+    if not to then return self:number(text)
+    elseif to == 'f' then
+        local range_follow = options['range-follow'] or template_opts['range-follow']
+        return self:number(from) .. range_follow
+    elseif to == 'ff' then
+        local range_ffollow = options['range-ffollow'] or template_opts['range-ffollow']
+        return self:number(from) .. range_ffollow
+    else
+        local range_sep = options['range-sep'] or template_opts['range-sep']
+        return self:number(from) .. range_sep .. self:number(to)
+    end
+end
+
+function Builtins:range_list(text)
+--[[
+    Format a list using 'range' as the formatter.
+    This is to make the range list (e.g. for page ranges) easily accessible
+    as a built-in formatter.
+--]]
+    return self:list_format(text, { formatter = 'range' })
+end
+
+
 
 return Templates
