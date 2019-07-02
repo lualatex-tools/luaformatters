@@ -317,8 +317,11 @@ function Templates:create_macro(entry)
     if not entry then return end
 
     -- Set up variables
-    local arg_num = ''
-    if entry.args then arg_num = '['.. #entry.args .. ']' end
+    local arg_cnt, arg_num = 0, ''
+    if entry.args then
+        arg_cnt = #entry.args
+        arg_num = '['.. arg_cnt .. ']'
+    end
     local opt = ''
     if entry.opt then opt = '[' .. entry.opt .. ']' end
     local args = self:_macro_args(entry)
@@ -345,6 +348,26 @@ function Templates:create_macro(entry)
         '<<<argsep>>>', argsep)
     local macro = wrapper_template:gsub('<<<lua>>>', lua_template)
     tex.print(macro)
+
+    if template_opts['self-documentation'] then
+        local doc_template = [[
+    <<<comment>>>\<<<name>>><<<opt>>><<<args>>>]]
+        args = ''
+        if arg_cnt > 0 then
+            for _, v in ipairs(entry.args) do
+                if v ~= 'options' then args = '{'..v..'}' end
+            end
+        end
+        if opt == '[]' then opt = '[options]' end
+        local comment = entry.comment
+        local comment_template = '%% <<<comment>>>\n'
+        if comment and comment ~= '' then comment = comment_template:gsub('<<<comment>>>', comment) end
+        entry.docstring = doc_template:gsub(
+            '<<<comment>>>', comment):gsub(
+            '<<<name>>>', entry.name):gsub(
+            '<<<opt>>>', opt):gsub(
+            '<<<args>>>', args)
+    end
 end
 
 function Templates:find_node(key, root, create)
