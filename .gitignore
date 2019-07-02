@@ -41,3 +41,7 @@ luac.out
 
 *.pygtex
 *.pygstyle
+*.toc
+*.pdf
+*.log
+*.aux
