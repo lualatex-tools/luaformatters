@@ -442,19 +442,23 @@ function Templates:_macro_args(entry)
     local in_args, args = entry.args, {}
     -- Skip if there are no arguments
     if in_args then
+        local arg_indexes = {}
+        for i=1, #in_args, 1 do table.insert(arg_indexes, i) end
         -- Move an 'options' arg to the beginning (as the LaTeX #1 argument)
         if entry.opt then
             local opt_index = indexof(in_args, 'options')
             if opt_index then
-                table.remove(in_args, opt_index)
-                table.insert(in_args, 1, 'options')
+                table.remove(arg_indexes, 1)
+                table.insert(arg_indexes, opt_index, 1)
             end
         end
         -- Generate arguments and populate a list `args`
-        for i, arg in ipairs(in_args) do
-            if is_func then
-                table.insert(args, self:_numbered_argument(i))
-            else
+        if is_func then
+            for _, index in ipairs(arg_indexes) do
+                table.insert(args, self:_numbered_argument(index))
+            end
+        else
+            for i, arg in ipairs(in_args) do
                 table.insert(args, string.format([[
     %s = %s]], arg, self:_numbered_argument(i)))
             end
@@ -817,7 +821,7 @@ function Builtins:list_format(text, options)
       (see Builtins:range) or 'number' (see Buitlins:number).
 --]]
     if not text or text == ''  then return '' end
-    options = options or {}
+    options = template_opts:check_local_options(options, true)
 
     local elements = self:split_list(text, options.input_separator or ' and ')
     local formatter = options.formatter
@@ -853,7 +857,7 @@ function Builtins:list_join(options, list)
     for a different last separator. Considering that list compression is also
     planned it seems OK to do it manually.
 --]]
-    local options = options or {}
+    local options = template_opts:check_local_options(options, true)
     local sep = options.separator or ', '
     local last_sep = options.last_sep or sep
     if #list == 0 then return ''
@@ -879,7 +883,7 @@ function Builtins:number(text, options)
     will be processed according to the 'number-case' package option or the
     'number-case' option in the passed `options`.
 --]]
-    options = options or {}
+    options = template_opts:check_local_options(options, true)
     if tonumber(text) or text:find('\\') then return text end
     return self:format('case',
         options['number-case'] or template_opts['number-case'],
@@ -910,7 +914,7 @@ function Builtins:range(text, options)
     which by default is '--'.
     The package options can also be overridden by the optional `options` table.
     --]]
-    options = options or {}
+    options = template_opts:check_local_options(options, true)
     local from, to = self:split_range(text)
     if not to then return self:number(text)
     elseif to == 'f' then
