@@ -23,6 +23,20 @@ local err, warn, info, log = luatexbase.provides_module({
 local Templates = {}
 local Builtins = {}
 
+--[[
+    Ensure that a color package is loaded,
+    otherwise require xcolor.
+--]]
+if template_opts.color then
+    colors = [[
+\makeatletter
+\@ifpackageloaded{xcolor}{}
+{\@ifpackageloaded{color}{}{\RequirePackage{xcolor}}}
+\makeatother
+]]
+    tex.print(colors:explode('\n'))
+end
+
 function Templates:setup(var_name, config)
 --[[
     Create a new Templates object.
