@@ -196,6 +196,18 @@ function Templates:check_args(entry)
     end
 end
 
+function Templates:check_options(options)
+--[[
+    Make sure that an options argument is a processed table (even if empty).
+--]]
+    if type(options) == 'table' then
+        return options
+    else
+        if not options then options = '' end
+        return template_opts:check_local_options(options, true)
+    end
+end
+
 function Templates:check_template_args(args, template)
 --[[
     Perform validity checks for given args against a template.
@@ -821,7 +833,7 @@ function Builtins:list_format(text, options)
       (see Builtins:range) or 'number' (see Buitlins:number).
 --]]
     if not text or text == ''  then return '' end
-    options = template_opts:check_local_options(options, true)
+    options = self:check_options(options)
 
     local elements = self:split_list(text, options.input_separator or ' and ')
     local formatter = options.formatter
@@ -857,7 +869,7 @@ function Builtins:list_join(options, list)
     for a different last separator. Considering that list compression is also
     planned it seems OK to do it manually.
 --]]
-    local options = template_opts:check_local_options(options, true)
+    options = self:check_options(options)
     local sep = options.separator or ', '
     local last_sep = options.last_sep or sep
     if #list == 0 then return ''
@@ -883,7 +895,7 @@ function Builtins:number(text, options)
     will be processed according to the 'number-case' package option or the
     'number-case' option in the passed `options`.
 --]]
-    options = template_opts:check_local_options(options, true)
+    options = self:check_options(options)
     if tonumber(text) or text:find('\\') then return text end
     return self:format('case',
         options['number-case'] or template_opts['number-case'],
@@ -914,7 +926,7 @@ function Builtins:range(text, options)
     which by default is '--'.
     The package options can also be overridden by the optional `options` table.
     --]]
-    options = template_opts:check_local_options(options, true)
+    options = self:check_options(options)
     local from, to = self:split_range(text)
     if not to then return self:number(text)
     elseif to == 'f' then
