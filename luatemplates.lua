@@ -1,276 +1,324 @@
 local err, warn, info, log = luatexbase.provides_module({
     name               = "luatemplates",
-    version            = '0.5',
-    date               = "2019/06/28",
+    version            = '0.8',
+    date               = "2019/07/02",
     description        = "Lua module for templating.",
     author             = "Urs Liska",
     copyright          = "2019- Urs Liska",
     license            = "GPL3",
 })
 
+--[[
+    Main tables.
+    *Templates* is the main table that is also returned.
+    Client code will call Templates:setup for an instance
+    and may then add formatter functions to that instance.
+
+    *Builtins* contains formatter and helper functions that are not
+    automatically exposed as LaTeX macros, but they
+    - can be added through the configuration mechanism
+    - can be accessed through Templates:format('<name>')
+    - can be accessd through Templates:<name> as toplevel methods.
+--]]
 local Templates = {}
 local Builtins = {}
 
 function Templates:setup(var_name, config)
 --[[
     Create a new Templates object.
-    If a `config` table is provided, included templates,
-    formatters, shorthands and styles are installed in the object.
-    Specifically, the existing of the following subtables triggers
-    specific actions:
-    - templates
-      installs the included hierarchy of templates.
-      These will be available through the `format()` and `write()` methods.
-    - formatters
-      Like templates, but handles formatting functions.
-    - shorthands
-      Installs the given shorthands as formatters
-      *and creates corresponding LaTeX commands*. The key of each shorthand
-      will be used as the command name.
-    - styles
-      Same as with shorthands. (Styles are formatting functions that expect
-      exactly one argument which is used to replace a '<<<text>>>'
-      template).
-    - mappings
-      Creates complex LaTeX commands accessing available formatters and templates.
-    For details about the three last items refer to the Templates:create_NN
-    methods.
-    If any of these subtables is not provided it can be added later as well.
-    If no templates or formatters are provided, still several of the built-in
-    formatters can be used from the Templates object.
+    - `var_name`
+      The created object will be stored in the global variable <var_name>.
+      It can later be accessed from Lua code through this name, and the
+      generated LaTeX macros also refer to it by this name.
+      Typical names are composed like `<project_prefix>_templates`.
+    A `config` table may include any or all of the following elements:
+    - `prefix`
+      A prefix string prepended to generated LaTeX macros
+      (useful for package creation)
+    - formatters in any or all of the `shorthands`, `styles`,
+      `templates` and `formatters` subtables.
+      These four trees are treated identically, and the separation only serves
+      for better structuring of the input files.
+      Each entry may be either a template string, a formatter function, or
+      a formatter entry table (TODO: Where to refer to for information?)
+      All entries whose keys/names do not start with an underscore will be
+      automatically exposed as a LaTeX macro.
+    - `namespace`
+      A hierarchical namespace table can be used to define a namespace.
+      formatters may be stored hierarchically to subtables corresponding
+      to the `namespace` table.
+      A namespace is not necessary when the entries are to be stored in a flat
+      structure anyway.
+      TODO: Currently misspellings of nodes will cause “formatters” to be
+      assigned rather than going to the next namespace level, and the resulting
+      error message is misleading.
+    Elements missing in the config table (or a missing config table in the
+    first place) can in theory be patched in at a later point, but this is
+    strongly discouraged and there is no coding support for this.
 --]]
     config = config or {}
     local o = {
         _name = var_name,
         _macro_prefix = config.prefix or '',
         _namespace = config.namespace or {},
-        _builtin_formatters = {
-            -- The following formatters are special functions
-            -- handling the auto-generated shorthands and styles
-            -- TODO: Probably these are obsolete when the generic command
-            -- creation is implemented.
-            shorthand = Templates.shorthand,
-            style = Templates.style,
-        }
+        _formatters = {},
+        _builtin_formatters = {}
     }
     setmetatable(o, self)
+    -- Make Builtins members accessible through Templates:<key>
     self.__index = function (_, key) return self[key] or Builtins[key] end
+
+    -- Register all functions from Builtins as formatters
+    self.assign_formatters(o, '', {}, o._builtin_formatters, Builtins)
+    -- Register all formatters provided by the client
     for _, category in pairs({'shorthands', 'styles', 'templates', 'formatters'}) do
         local root = config[category]
         if root then
-            self.assign_formatters(o, o._namespace, root)
+            self.assign_formatters(o, '', o._namespace, o._formatters, root)
         end
     end
-    if config.shorthands then
-        self.create_shorthands(o, config.shorthands)
-    end
-    if config.styles then
-        self.create_styles(o, config.styles)
-    end
-    if config.mapping then
-        self.create_commands(o, config.mapping)
-    end
+    -- Allow additional configuration, mainly for (builtin) functions
+    self.configure(o, config.configuration)
+
+    -- Create macros and documentation from registered formatters.
+    self.create_macros(o, o._macro_prefix, o._namespace, o._formatters)
+
+    -- Register the object as a global variable (used in the generated macros,
+    -- but can also be used to acces 'self' later)
     _G[var_name] = o
     return o
 end
 
-function Templates:assign_formatters(target, source)
+function Templates:args_from_template(template)
+--[[
+    Generates an array table with argument names from a template, performing
+    validity checks:
+    - If the template has *no* fields ('shorthand') 'nil' is returned
+    - If the templates has *one* field or 'options' plus another field
+      the one or two field name(s) are returned in order of appearance.
+    - If more than that number of fields is present an error is raised.
+      (NOTE: While it *might* be ok to infer the order of arguments from the
+       order of appearance in the template this would break the abstraction:
+       Changes in the template might break existing usages of the command.)
+--]]
+    local fields, has_options = self:template_fields(template)
+    local max_args
+    if has_options then max_args = 2 else max_args = 1 end
+    if #fields == 0 then
+        return nil
+    elseif #fields <= max_args then
+        return fields, has_options
+    else
+        err(string.format([[
+Error configuring template.
+Can't automatically determine the order
+of arguments in Templates with more than
+one (plus 'options') fields:
+%s
+]], template))
+    end
+end
+
+function Templates:assign_formatters(key, namespace, target, source)
 --[[
     Recursively assign formatters from one category
-    to the namespace.
+    to the _formatters table, normalizing it to table syntax
+    - namespace
+      The current level in the namespace hierarchy.
+      Used to determine whether an entry is a key to a sublevel
+      or a formatter entry.
+      NOTE: Currently there is no proper way to detect misspelled
+      sublevel keys.
+    - target
+      Current level of the target tree (initially self._formatters)
+    - source
+      Current level of the source tree.
 --]]
+    local function next_key(k)
+        if key == '' then
+            return k
+        else
+            return key..'.'..k
+        end
+    end
+
     for k, v in pairs(source) do
-        if target[k] then
+        if target[k] and not namespace[k] then
+            err(string.format([[
+Namespace conflict: Node %s already defined!]], k))
+        elseif namespace[k] then
             --[[
                 key is found in namespace,
                 so go down one level in the hierarchy.
-                NOTE: This will fail if k does not refer to a namespace node
-                but to a formatter already defined in an earlier category.
-                TODO: Is there a way to check this condition to prevent
-                really obscure errors?
             --]]
-            self:assign_formatters(target[k], v)
+            if not target[k] then target[k] = {} end
+            self:assign_formatters(next_key(k), namespace[k], target[k], v)
         else
             --[[
                 Key is *not* found in namespace, so we assume it's a formatter.
-                This must be a valid formatter function or template.
+                Validity is the responsibility of the definer.
             --]]
-            target[k] = v
+            target[k] = self:validate_formatter(next_key(k), v)
         end
     end
 end
 
-function Templates:create_command(name, properties)
+function Templates:check_args(entry)
 --[[
-    Create a single LaTeX command using this object's templates and formatters.
-    - name
-      The name of the resulting command
-    - properties
-      The properties of the resulting command, either a string or a table.
-      - If it is a string it is considered the key to a formatting method,
-        and a command with *one* argument - which is passed to the formatter -
-        is created. NOTE: This may *not* be a *template* since simple templating
-        commands with one argument are handled through the *styles* mechanism.
-      - If it is a table then it may include mandatory and optional keys:
-        - f (string)[mandatory]
-          The formatter function (identical to the single string above)
-        - color (string)
-          If a color is specified this will be used instead of the `default-color`
-          package option (if the `color` option is true, that is).
-          If `color = 'nocolor'` is given than this command will *never* be
-          wrapped in a \textcolor command - which may be necessary for more
-          complex commands or environments where this wrap might break things.
-        - opt (string)
-          If `opt` is given the command will get an optional argument.
-          The content of this field will be supplied as the default value, so
-          `opt = ''` will result in `[]` while
-          `opt = 'foo=bar'` will give `[foo=bar]`
-        - args (array table)
-          If `args` is given it should be an array with argument names.
-          This array is only used to determine the number of arguments
-          that are passed on to the formatter function while their *names*
-          are ignored. However, it is recommended to use the actual argument
-          names used in the formatter, for documentation purposes.
-        - keys (array table) [TODO: This is not implemented yet]
-          If `keys` is given `args` and `opt` will be ignored and a
-          template replacement command is created instead - so in this case the
-          `f` argument must point to a template rather than a formatter.
-          The keys refer to the keys used in the template, and the command
-          creates as many arguments as there are keys. So from
-              `name = 'mycommand' f = 'my.template' keys = {'foo', 'bar'}`
-          the command will look like
-              `\mycommand[2]{...}`
-          while an invocation
-              `\mycommand{hey}{there}`
-          will result in the call
-              `Templates:write('my.template', { foo = 'hey', bar = 'there' })`
+    Perform validity checks for arguments in a formatter entry,
+    depending on whether the formatter is a function or a template.
+    Updates the given table and doesn't return a value.
 --]]
-    local formatter, color, arg_num, opt, args = '', '', 0, '', ''
-    local key = properties.f or properties
-    if type(properties) == 'string' then
-        formatter = string.format([['%s']], properties)
-        color = 'default'
-        opt = ''
-        arg_num = '[1]'
-        args = self:_numbered_argument(1)
-    else
-        formatter = string.format([[
-            {'%s','%s'}]], properties.f, properties.color or 'default')
-        args = {}
-        if properties.opt then
-            arg_num = 1
-            opt = string.format('[%s]', properties.opt)
-            table.insert(args, self:_numbered_argument(1))
+    local has_options
+    if type(entry.f) == 'function' then
+        -- ignore any given arguments for functions
+        entry.args = {}
+        -- retrieve arguments by introspection
+        local arg_cnt = debug.getinfo(entry.f).nparams
+        local arg
+        for i=2, arg_cnt, 1 do -- skip the 'self' argument
+            arg = debug.getlocal(entry.f, i)
+            if arg == 'options' and not entry.opt then entry.opt = '' end
+            table.insert(entry.args, arg)
         end
-        if properties.args then
-            for _ in ipairs(properties.args) do
-                arg_num = arg_num + 1
-                table.insert(args, string.format(self:_numbered_argument(arg_num)))
+    else -- template
+        if not entry.args then
+            -- Check if arguments can be inferred
+            entry.args, has_options = self:args_from_template(entry.f)
+            if has_options then entry.opt = '' end
+        else
+            -- Check validity of given arguments
+            has_options = self:check_template_args(entry.args, entry.f)
+            if has_options then
+                if not entry.opt then entry.opt = '' end
             end
         end
-        args = self:list_join(args)
-        if arg_num > 0 then
-            arg_num = string.format('[%s]', arg_num)
-        else
-            arg_num = ''
+    end
+end
+
+function Templates:check_template_args(args, template)
+--[[
+    Perform validity checks for given args against a template.
+    - If a field in the template has no corresponding argument,
+      issue a warning (while this is most probably erroneous it
+      doesn't warrant aborting the compilation)
+    - If an argument doesn't have a corresponding field, produce an error.
+
+    TODO: Make sure this code can't be considerably condensed ...
+--]]
+    local _fields, _args = {}, {}
+    local fields = self:template_fields(template)
+    for _, v in ipairs(fields) do
+        _fields[v] = true
+    end
+    for _, v in ipairs(args) do
+        if not _fields[v] then
+            err(string.format([[
+Error configuring template.
+Argument '%s' does not match any field.
+Available Fields:
+- %s
+]], v, table.concat(fields, '\n- ')))
+        end
+        _args[v] = true
+    end
+    for _, v in ipairs(fields) do
+        if not _args[v] then
+            warn(string.format([[
+Problem configuring template.
+Field '%s' has no matching argument
+and will not be replaced.
+Present arguments:
+- %s
+]], v, table.concat(args, '\n- ')))
         end
     end
-    if not self:formatter(key) then
-        err(string.format([[
-Trying to create the LaTeX command "\%s"
-but no formatter/template found at key
-"%s"]], name, key))
-    end
-    tex.print(string.format([[
-    \newcommand{\%s}%s%s{\directlua{%s:write(%s, %s)}}]],
-    name, arg_num, opt, self._name, formatter, args))
+    -- return true if there is an 'options' argument
+    return _args.options
 end
 
-function Templates:create_commands(map)
+function Templates:configure(map)
 --[[
-    Create a number of LaTeX commands based on a mapping table.
-    - map
-      is a flat table whose keys are the names of the created commands
-      and whose values are the properties of the corresponding command
-      (see Templates:create_command() for details).
+    Apply any provided manual configuration.
 --]]
-  for name, properties in pairs(map) do
-      self:create_command(name, properties)
-  end
+    if not map then return end
+    for name, entry in pairs(map) do
+        self:configure_entry(name, entry)
+    end
 end
 
-function Templates:create_shorthand(key, template)
+function Templates:configure_entry(name, properties)
 --[[
-    Create a “shorthand” LaTeX command.
-    - `key`
-      will be the name of the command
-    - `template`
-      the replacement text or an array with template and color, where the
-      special color 'nocolor' will prevent the coloring even when it is
-      globally switched on.
+    Apply manual configuration for a given item.
+    This can be used to expose builtin formatters as LaTeX macros,
+    or to extend the configuration of registered formatters,
+    typically used for formatter functions that have been defined
+    with the standalone `function Templates:<name>` syntax.
+    - check that a formatter exists at the given key
+    - install it in self._formatters
+      (for builtin formatters, *move* the entry to the _formatters tree)
+    - give it a name
 --]]
-    local color = 'default'
-    if type (template) == 'table' then
-        color = template[2]
-        template = template[1]
+    if type(properties) == 'string' then
+        properties = { key = properties }
     end
-    self:find_parent(key, self._namespace)[key] = template
-    tex.print(string.format([[
-\newcommand{\%s}{\directlua{%s:write({ 'shorthand', '%s' }, '%s')}}]],
-      key, self._name, color, key))
+    properties.name = name
+    local entry = self:find_node(properties.key, self._builtin_formatters)
+    if entry then
+        -- move a builtin formatter to the formatter hierarchy
+        self._formatters[properties.key] = entry
+        self._builtin_formatters[properties.key] = nil
+    else
+        entry = self:find_node(properties.key, self._formatters)
+        if not entry then err(string.format([[
+Error configuring command entry.
+No formatter found at key: %s]], properties.key))
+        end
+    end
+    -- assign all configuration parameters to the formatter entry
+    for k, v in pairs(properties) do
+        if k ~= 'key' then entry[k] = v end
+    end
 end
 
-function Templates:create_shorthands(templates)
+function Templates:create_macro(entry)
 --[[
-    Create multiple “shorthand” LaTeX commands.
-    - templates
-      table with templates (see Templates:create_shorthand)
---]]
-    for key, result in pairs(templates) do
-        self:create_shorthand(key, result)
-    end
-end
+    Create a LaTeX macro from the given entry, assuming it is fully populated.
 
-function Templates:create_style(key, template)
---[[
-    Create a “style” LaTeX command.
-    Styles are regular character styles but can be anything where a single
-    argument is replaced with some text.
-    - `key`
-      will be the name of the command
-    - `template`
-      the template where the command's single argument will be replaced with.
-      NOTE: The template *must* include the key `<<<text>>>`
-      This is either a string, or an array with two strings. In this the first
-      string is the template and the second a color. The special color 'nocolo'
-      prevents the style to be colored even when coloring is switched on.
+    TODO: Also (optionally) create a documentation string.
 --]]
-    local color = 'default'
-    if type(template) == 'table' then
-        color = template[2]
-        template = template[1]
-    end
-    if not template:find('<<<text>>>') then
-        err(string.format([[
-Trying to create style "%s"
-but template does not include "<<<text>>>":
-%s]], key, template))
-    end
-    self:find_parent(key, self._namespace)[key] = template
-    tex.print(string.format([=[
-        \newcommand{\%s}[1]{\directlua{%s:write({ 'style', '%s' }, '%s', %s)}}]=],
-        key, self._name, color, key, self:_numbered_argument(1)))
-end
+    -- NOTE: entry is nil if the name starts with an underscore, so it is skipped.
+    if not entry then return end
 
-function Templates:create_styles(styles)
-    --[[
-        Create multiple “style” LaTeX commands.
-        - templates
-          table with templates (see Templates:create_style)
-    --]]
-    for key, template in pairs(styles) do
-        self:create_style(key, template)
-    end
+    -- Set up variables
+    local arg_num = ''
+    if entry.args then arg_num = '['.. #entry.args .. ']' end
+    local opt = ''
+    if entry.opt then opt = '[' .. entry.opt .. ']' end
+    local args = self:_macro_args(entry)
+    local argsep = ''
+    if args ~= '' then argsep = ', ' end
+
+    -- Set up templates
+    local wrapper_template = [[
+\newcommand{\<<<name>>>}<<<argnum>>><<<opt>>>{\directlua{<<<lua>>>}}]]
+    local lua_template = [[
+<<<obj>>>:write({ '<<<formatter>>>', '<<<color>>>' }<<<argsep>>><<<args>>>)]]
+
+    -- Populate templates with actual data
+    wrapper_template = wrapper_template:gsub(
+    '<<<name>>>', entry.name):gsub(
+    '<<<argnum>>>', arg_num):gsub(
+    '<<<opt>>>', opt)
+    lua_template = lua_template:gsub(
+        '<<<obj>>>', self._name):gsub(
+        '<<<formatter>>>', entry.key):gsub(
+        '<<<template>>>', entry.f):gsub(
+        '<<<color>>>', entry.color):gsub(
+        '<<<args>>>', args):gsub(
+        '<<<argsep>>>', argsep)
+    local macro = wrapper_template:gsub('<<<lua>>>', lua_template)
+    tex.print(macro)
 end
 
 function Templates:find_node(key, root, create)
@@ -284,8 +332,9 @@ function Templates:find_node(key, root, create)
     - create (boolean)
       If the given node is not found in the table it is either created
       (as an empty table) or nil is returned, depending on `create` being
-      a true value.
+      a true value. Intermediate nodes may be created too.
 --]]
+    if not root then root = self._formatters end
     if key == '' then return root end
     local cur_node, next_node = root
     for _, k in ipairs(key:explode('.')) do
@@ -304,35 +353,6 @@ function Templates:find_node(key, root, create)
     return cur_node
 end
 
-function Templates:find_parent(key, root, create)
---[[
-    Find a parent and key name.
-    - key (string)
-      Name of the node in dot-list-notation.
-      If an empty string is provided return the original root.
-    - root (table)
-      Starting point for the search (usually a toplevel table in Templates)
-    - create (boolean)
-      If the given node is not found in the table it is either created
-      (as an empty table) or nil is returned, depending on `create` being
-      a true value.
---]]
-    if key == '' then return root, nil end
-    local path, k = key:match('(.*)%.(.*)')
-    if path then
-        return self:find_node(path, root, create), k
-    else
-        if root[key] then
-            return root, key
-        elseif create then
-            root[key] = {}
-            return root, key
-        else
-            return root, nil
-        end
-    end
-end
-
 function Templates:format(key, ...)
 --[[
     Format and return the given data using a formatter addressed by `key`.
@@ -344,19 +364,16 @@ function Templates:format(key, ...)
         current `Templates` object.
       - the function is expected to return a string.
     - if `key` points to a *template*:
-      - ... must be one out of:
-        - a table mapping field names to values for the replacment
-          (which have to match the fields in the template)
-        - a string, which will be replaced with the first field found
-          in the template.
+      - ... must be a table mapping field names to values for the
+          replacment (which have to match the fields in the template)
 --]]
     local formatter = self:formatter(key)
     if not formatter then
         err(string.format([[
-        Trying to format values
-        %s
-        but no template/formatter found at key
-        %s]], ..., key))
+Trying to format values
+%s
+but no template/formatter found at key
+%s]], ..., key))
     end
     if type(formatter) == 'function' then
         return formatter(self, ...)
@@ -369,16 +386,84 @@ function Templates:formatter(key)
 --[[
     Find a formatter matching the given key.
     Look for both templates and formatter methods.
+    NOTE: This returns a formatter and an *entry* containing the formatter.
+    While somewhat redundant it is a convenience function for the usual case
+    where only the formatter itself is required.
 --]]
     local result
-    for _, root in ipairs{
-        Builtins,
-        self._builtin_formatters, -- TODO: Remove when obsolete
-        self._namespace,
-    } do
+    for _, root in ipairs({self._formatters, self._builtin_formatters}) do
         result = self:find_node(key, root)
-        if result then return result end
+        if result then return result.f, result end
     end
+end
+
+function Templates:create_macros(prefix, namespace, parent)
+--[[
+    Walk the self._formatters tree and create LaTeX macros for all entries
+    whose name doesn't start with an underscore.
+--]]
+    local function next_prefix(key)
+        -- helper function to create the mixedCase default macro names
+        if prefix == '' then
+            return key
+        else
+            return prefix..self:capitalize(key)
+        end
+    end
+
+    for k, v in pairs(parent) do
+        if namespace[k] then
+            -- Enter next level
+            self:create_macros(
+            next_prefix(k),
+            namespace[k],
+            parent[k])
+        else
+            -- Create macro after clean-up/completion of entry
+            -- NOTE: process_entry returns nil if the name starts with
+            -- an underscore.
+            self:create_macro(self:process_entry(next_prefix(k), parent[k]))
+        end
+    end
+end
+
+function Templates:_macro_args(entry)
+--[[
+    Generate a string used to write arguments to the LaTeX macro.
+    Handling depends on whether the formatter is a function or a template.
+--]]
+    local function indexof(array, value)
+        for i, v in ipairs(array) do
+            if v == value then return i end
+        end
+    end
+
+    local is_func = type(entry.f) == 'function'
+    local in_args, args = entry.args, {}
+    -- Skip if there are no arguments
+    if in_args then
+        -- Move an 'options' arg to the beginning (as the LaTeX #1 argument)
+        if entry.opt then
+            local opt_index = indexof(in_args, 'options')
+            if opt_index then
+                table.remove(in_args, opt_index)
+                table.insert(in_args, 1, 'options')
+            end
+        end
+        -- Generate arguments and populate a list `args`
+        for i, arg in ipairs(in_args) do
+            if is_func then
+                table.insert(args, self:_numbered_argument(i))
+            else
+                table.insert(args, string.format([[
+    %s = %s]], arg, self:_numbered_argument(i)))
+            end
+        end
+    end
+    -- Massage the output depending on the target
+    args = table.concat(args, ',')
+    if not is_func then args = '{' .. args .. '}' end
+    return args
 end
 
 function Templates:_numbered_argument(number)
@@ -389,6 +474,27 @@ function Templates:_numbered_argument(number)
     cases so far. I don't know if there's an “official” way to do this, though.
 --]]
     return string.format([["\luatexluaescapestring{\unexpanded{#%s}}"]], number)
+end
+
+function Templates:process_entry(name, entry)
+--[[
+    Update and complete a given formatter entry.
+    - Assign 'name' if no name is explicitly in the given entry.
+    - Set default color if no color is given in the entry.
+    - Skip the rest if name starts with an underscore.
+      (“Internal” formatters are accessible to the format() function
+       but not to LaTeX. The same is true for builtin formatters that
+       haven't been explicitly published through configuration.)
+    - validate/generate arguments:
+      - formatter functions get them from introspection
+      - templates are checked for validity.
+--]]
+    entry.name = entry.name or name
+    entry.color = entry.color or 'default'
+    if entry.name:sub(1, 1) == '_' then return end
+    entry.comment = entry.comment or ''
+    self:check_args(entry)
+    return entry
 end
 
 function Templates:_replace(template, data)
@@ -406,9 +512,9 @@ function Templates:_replace(template, data)
     if type(data) ~= 'table' then
         err(string.format([[
 Trying to replace template with non-table data.
-    Template:
+Template:
 %s
-    Data:
+Data:
 %s]], template, data))
     end
     for k, v in pairs(data) do
@@ -428,19 +534,19 @@ function Templates:replace(key, data)
     return self:_replace(self:template(key), data)
 end
 
-function Templates:shorthand(key)
---[[
-    Return the string stored as shorthand for the given key.
-    TODO: Check if it can be removed or moved to Builtins
---]]
-    return self:formatter(key) or err('Shorthand not defined: '..key)
-end
-
-
 function Templates:split_list(str, pat)
 --[[
     Split a string into a list at the given pattern.
     Built upon: http://lua-users.org/wiki/SplitJoin
+--]]
+--[[
+    TODO: Investigate a luatex-like solution with str:explode().
+    The following does *not* work because the pattern is included in the list.
+    local t = {}
+    for _, elt in ipairs(str:explode(pat)) do
+        if elt ~= pat then table.insert(t, elt) end
+    end
+    local cnt = #t
 --]]
     local t = {}
     local cnt = 1
@@ -460,15 +566,6 @@ function Templates:split_list(str, pat)
         table.insert(t, cap)
     end
     return t, cnt
---[[
-    TODO: Investigate a luatex-like solution with str:explode().
-    The following does *not* work because the pattern is included in the list.
-    local t = {}
-    for _, elt in ipairs(str:explode(pat)) do
-        if elt ~= pat then table.insert(t, elt) end
-    end
-    local cnt = #t
---]]
 end
 
 function Templates:split_range(text)
@@ -486,17 +583,6 @@ function Templates:split_range(text)
     end
 end
 
-function Templates:style(style, text)
---[[
-    Apply a style to the given text.
-    - style
-      must refer to a stored style.
-    TODO: Check if this can be removed or moved to Builtins
---]]
-    local template = self:formatter(style) or err('Style not defined: ' .. style)
-    return self:_replace(template, { text = text })
-end
-
 function Templates:template(key)
 --[[
     Retrieve a template for the given key.
@@ -512,56 +598,50 @@ is not a template but a function.]], key))
     end
 end
 
-function Templates:wrap_kv_option(key, value)
+function Templates:template_fields(template)
 --[[
-    Process a key/value pair to be used as a key/value option.
-    If a value is provided return 'key={value}' to protect the value from
-    possible commas misleading a parser. If no value is provided return the key
-    alone.
-    In order to provide this as a complete optional argument use
-    Templates:wrap_optional_arg on the result.
+    Return an array table with all template fields in the given template.
+    Order of appearance is preserved, duplicates are suppressed.
+    If an 'options' field is present, a second value 'true' is returned
 --]]
-    if value and value ~= '' then
-        return string.format([[%s={%s}]], key, value)
-    else
-        return key
+    local result = {}
+    local _result = {}
+    for element in template:gmatch('<<<(%w+)>>>') do
+        if not _result[element] then
+            _result[element] = true
+            table.insert(result, element)
+        end
     end
+    return result, _result.options
 end
 
-function Templates:wrap_macro(macro, value)
+function Templates:validate_formatter(key, entry)
 --[[
-    Wrap one or multiple values in a macro invocation.
-    - macro (string)
-      The name of the macro
-    - value (string or table)
-      One or multiple values. An empty string or nil causes one single argument
-      (or delimiter) to be created:
-      'mymacro', '' => \mymacro{}
-      Multiple values are mapped to multiple arguments:
-      'mymacro', { 'one', 'two', 'three' } => \mymacro{one}{two}{three}
+    (Sort-of) validate an assumed formatter entry.
+    If it is a simple (template) string or a function wrap it in a table.
+    Otherwise check if it has an 'f' key.
 --]]
-    local result = string.format([[\%s]], macro)
-    if not value then
-        value = { '' }
-    elseif type(value) == 'string' then
-        value = { value }
+    if type(entry) == 'string' or type(entry) == 'function' then
+        entry = { f = entry }
+    elseif not type(entry) == 'table' then
+        err(string.format([[
+Error assigning formatter. Table expected but
+'%s: %s' provided.
+]], type(entry), entry))
     end
-    for _, v in ipairs(value) do
-        result = result .. string.format('{%s}', v)
+    entry.key = key
+    if not entry.f then
+        local t = {}
+        for k, v in pairs(entry) do
+            table.insert(t, string.format('%s:\n%s', k, v))
+        end
+        err(string.format([[
+Error assigning formatter.
+Table passed but no proper formatter (f) included:
+%s
+]], table.concat(t, '\n')))
     end
-    return result
-end
-
-function Templates:wrap_optional_arg(opt)
---[[
-    Wrap an optional argument in square brackets if it is provided,
-    otherwise return an empty string.
---]]
-    if opt and opt ~= '' then
-        return '['..opt..']'
-    else
-        return ''
-    end
+    return entry
 end
 
 function Templates:_write(content, color)
@@ -602,6 +682,21 @@ function Templates:write(key_color, ...)
     self:_write(self:format(key, ...), color)
 end
 
+
+
+--[[
+    The *Builtins* table holds helper functions and formatters dealing with
+    styling and marking up strings, they help in a modular way of programming
+    templates and stylesheets.
+    All functions in this table can be implicitly invoked through
+    Templates:format() or Templates:write(), but they are by default *not*
+    exposed as LaTeX commands. However, this is possible by adding entries in
+    the config.configuration subtable for Templates:setup.
+    Templates also “inherits” from Builtins, so all elements of the Builtins
+    table can be accessed directly through Templates:<name>. Since the Builtins
+    table is not returned by this module this is the way external Lua code will
+    have to access these functions.
+--]]
 
 
 function Builtins:_add_ssscript(direction, base, element, parenthesis)
@@ -657,6 +752,15 @@ function Builtins:bold(text)
     return self:wrap_macro('textbf', text)
 end
 
+function Builtins:capitalize(word)
+--[[
+    Capitalize the first letter in the given word/string.
+--]]
+    if word == '' then return '' end
+    if #word == 1 then return word:upper() end
+    return word:sub(1, 1):upper() .. word:sub(2)
+end
+
 function Builtins:case(case, text)
 --[[
     Format text according to a given case strategy.
@@ -672,7 +776,16 @@ function Builtins:case(case, text)
     return string.format(templates[case], text)
 end
 
-function Templates:italic(text)
+function Builtins:emph(text)
+--[[
+    Emphasize the given text
+    NOTE: This may not be exposed as a LaTeX macro directly, but it may be useful
+    to use from within formatter functions.
+--]]
+    return self:wrap_macro('emph', text)
+end
+
+function Builtins:italic(text)
 --[[
     Make the given text italic
 --]]
@@ -701,7 +814,7 @@ function Builtins:list_format(text, options)
       actual function. The returned formatter must accept exactly one argument,
       so the registered 'styles' may be good formatters. Some of the built-in
       formatters are also suitable, maybe the most-used formatter is 'range'
-      (see Templates:range) or 'number' (see Templates:number).
+      (see Builtins:range) or 'number' (see Buitlins:number).
 --]]
     if not text or text == ''  then return '' end
     options = options or {}
@@ -717,13 +830,13 @@ function Builtins:list_format(text, options)
             end
         end
     end
-    return self:list_join(elements, {
+    return self:list_join({
         separator = options.separator or template_opts['list-sep'],
         last_sep = options.last_sep or template_opts['list-last-sep'],
-    })
+    }, elements)
 end
 
-function Builtins:list_join(list, options)
+function Builtins:list_join(options, list)
 --[[
     Join a list of strings with ', '.
     If the list is empty an empty string is returned.
@@ -821,6 +934,76 @@ function Builtins:range_list(text)
     return self:list_format(text, { formatter = 'range' })
 end
 
+function Builtins:shorthand(key)
+--[[
+    Return the string stored as shorthand for the given key.
+    TODO: Check if it can be removed or moved to Builtins
+--]]
+    return self:formatter(key) or err('Shorthand not defined: '..key)
+end
+
+function Builtins:style(style, text)
+--[[
+    Apply a style to the given text.
+    - style
+      must refer to a stored style.
+    TODO: Check if this can be removed or moved to Builtins
+--]]
+    local template = self:formatter(style) or err('Style not defined: ' .. style)
+    return self:_replace(template, { text = text })
+end
+
+function Builtins:wrap_kv_option(key, value)
+--[[
+    Process a key/value pair to be used as a key/value option.
+    If a value is provided return 'key={value}' to protect the value from
+    possible commas misleading a parser. If no value is provided return the key
+    alone.
+    In order to provide this as a complete optional argument use
+    Templates:wrap_optional_arg on the result.
+--]]
+    if value and value ~= '' then
+        return string.format([[%s={%s}]], key, value)
+    else
+        return key
+    end
+end
+
+function Builtins:wrap_macro(macro, value)
+--[[
+    Wrap one or multiple values in a macro invocation.
+    - macro (string)
+      The name of the macro
+    - value (string or table)
+      One or multiple values. An empty string or nil causes one single argument
+      (or delimiter) to be created:
+      'mymacro', '' => \mymacro{}
+      Multiple values are mapped to multiple arguments:
+      'mymacro', { 'one', 'two', 'three' } => \mymacro{one}{two}{three}
+--]]
+    local result = string.format([[\%s]], macro)
+    if not value then
+        value = { '' }
+    elseif type(value) == 'string' then
+        value = { value }
+    end
+    for _, v in ipairs(value) do
+        result = result .. string.format('{%s}', v)
+    end
+    return result
+end
+
+function Builtins:wrap_optional_arg(opt)
+--[[
+    Wrap an optional argument in square brackets if it is provided,
+    otherwise return an empty string.
+--]]
+    if opt and opt ~= '' then
+        return '['..opt..']'
+    else
+        return ''
+    end
+end
 
 
 return Templates
