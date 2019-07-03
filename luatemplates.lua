@@ -358,11 +358,11 @@ function Templates:create_macro(entry)
 
     if template_opts['self-documentation'] then
         local doc_template = [[
-    <<<comment>>>\<<<name>>><<<opt>>><<<args>>>]]
+<<<comment>>>\<<<name>>><<<opt>>><<<args>>>]]
         args = ''
         if arg_cnt > 0 then
             for _, v in ipairs(entry.args) do
-                if v ~= 'options' then args = '{'..v..'}' end
+                if v ~= 'options' then args = args..'{'..v..'}' end
             end
         end
         if opt == '[]' then opt = '[options]' end
