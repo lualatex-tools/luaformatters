@@ -21,7 +21,9 @@ local err, warn, info, log = luatexbase.provides_module({
     - can be accessd through Templates:<name> as toplevel methods.
 --]]
 local Templates = {}
-local Builtins = {}
+local Builtins = {
+    docstrings = {}
+}
 
 
 local function handle_dependencies()
@@ -82,15 +84,18 @@ function Templates:setup(var_name, config)
         _name = var_name,
         _macro_prefix = config.prefix or '',
         _namespace = config.namespace or {},
-        _formatters = {},
-        _builtin_formatters = {}
+        _formatters = {
+        },
+        _builtin_formatters = {
+        }
     }
+    o._namespace.docstrings = {}
     setmetatable(o, self)
     -- Make Builtins members accessible through Templates:<key>
     self.__index = function (_, key) return self[key] or Builtins[key] end
 
     -- Register all functions from Builtins as formatters
-    self.assign_formatters(o, '', {}, o._builtin_formatters, Builtins)
+    self.assign_formatters(o, '', o._namespace, o._builtin_formatters, Builtins)
     -- Register all formatters provided by the client
     for _, category in pairs({'shorthands', 'styles', 'templates', 'formatters'}) do
         local root = config[category]
@@ -100,6 +105,9 @@ function Templates:setup(var_name, config)
     end
     -- Allow additional configuration, mainly for (builtin) functions
     self.configure(o, config.configuration)
+
+    -- Expose docstring functions if requested
+    self.create_self_documentation_macros(o)
 
     -- Create macros and documentation from registered formatters.
     self.create_macros(o, o._macro_prefix, o._namespace, o._formatters)
@@ -358,22 +366,49 @@ function Templates:create_macro(entry)
 
     if template_opts['self-documentation'] then
         local doc_template = [[
-<<<comment>>>\<<<name>>><<<opt>>><<<args>>>]]
-        args = ''
+\<<<name>>><<<opt>>><<<args>>>]]
+        local argstring = ''
+        local doc_args = {}
+        if entry.opt then
+            if entry.opt == '' then
+                table.insert(doc_args, 'options')
+            else
+                table.insert(doc_args, opt:match('%[(.+)%]'))
+            end
+            opt = '[<<<arg>>>]'
+        end
         if arg_cnt > 0 then
             for _, v in ipairs(entry.args) do
-                if v ~= 'options' then args = args..'{'..v..'}' end
+                if v ~= 'options' then
+                    table.insert(doc_args, v)
+                    argstring = argstring..'{<<<arg>>>}'
+                end
             end
         end
-        if opt == '[]' then opt = '[options]' end
-        local comment = entry.comment
-        local comment_template = '%% <<<comment>>>\n'
-        if comment and comment ~= '' then comment = comment_template:gsub('<<<comment>>>', comment) end
+        entry.doc_args = doc_args
         entry.docstring = doc_template:gsub(
-            '<<<comment>>>', comment):gsub(
             '<<<name>>>', entry.name):gsub(
             '<<<opt>>>', opt):gsub(
-            '<<<args>>>', args)
+            '<<<args>>>', argstring)
+    end
+end
+
+function Templates:create_self_documentation_macros()
+--[[
+    Register the functions from Builtins.docstrings as
+    LaTeX macros if 'self-documentation' is active.
+--]]
+    if template_opts['self-documentation'] then
+        self:configure_entry('luaMacroDocInline', {
+            key = 'docstrings.inline',
+            comment = 'Write a documentation string',
+            color = 'nocolor'
+        })
+        self:configure_entry('luaMacroDoc', {
+            key = 'docstrings.minted',
+            comment = 'Write a single documentation string in a minted environment',
+            color = 'nocolor'
+        })
     end
 end
 
@@ -1072,6 +1107,149 @@ function Builtins:wrap_optional_arg(opt)
         return ''
     end
 end
+
+
+--[[
+    Builtins.docstrings
+    Functions for the self-documentation mode.
+    They are only exposed as commands in create_self_documentation_macros()
+    when the 'self-documentation' option is set during package loading.
+--]]
+
+function Builtins:_docstring(key, options)
+--[[
+    Return the docstring for a given key.
+--]]
+    options = self:check_options(options)
+    local entry, docstring
+    if type(key) == 'table' and key.docstring then
+        entry = key
+        docstring =  key.docstring
+    else
+        local ns = self:find_node(key, self._namespace)
+        if ns and options.single then
+            msg = 'Requested docstring for namespace node '..key
+            warn(msg)
+            return msg
+        end
+        local _
+        _, entry = self:formatter(key)
+        if not entry then
+            local msg = 'No formatter entry for documenting '..key
+            warn(msg)
+            return msg
+        end
+        if not entry.docstring then
+            local msg = string.format([[
+    Docstring requested for key %s
+    but package option 'self-documentation' seems not to be active
+            ]], key)
+            warn(msg)
+            return(msg)
+        end
+        docstring = entry.docstring
+    end
+    local result = ''
+    -- Prepend a line comment if present and not disabled
+    if not options.nocomment and entry.comment ~= '' then
+        result = string.format([[
+%% %s
+]], entry.comment)
+    end
+    -- load docstring template
+    result = result..docstring
+
+    -- Populate docstring with argument names or values
+    local docargs = {}
+    local value = ''
+    if options.args then
+        --[[
+            If an args option is given (as a comma-separated list,
+            NOTE: spaces around the commas are preserved.)
+            the actual values are inserted.
+            If not enough args are given the remaining values
+            are retrieved from the argument names.
+        --]]
+        docargs = options.args:explode(',')
+        if #docargs < #entry.doc_args then
+            for i = #docargs + 1, #entry.doc_args, 1 do
+                table.insert(docargs, '<'..entry.doc_args[i]..'>')
+            end
+        end
+    else
+        -- else use the argument names.
+        docargs = entry.doc_args
+    end
+    for i, v in ipairs(entry.doc_args) do
+        value = docargs[i]
+        result = result:gsub('<<<arg>>>', value, 1)
+    end
+    return result
+end
+
+function Builtins:_docstrings(key, options)
+--[[
+    Return a list of docstrings for a subtree of the namespace.
+    TODO: This is not implemented yet
+    (https://github.com/uliska/luatemplates/issues/11)
+--]]
+    return self:_docstring(key, options)
+end
+
+function Builtins.docstrings:inline(key, options)
+--[[
+    Return a minted-formatted docstring inline to a paragraph.
+    If options.args contains a comma-separated list of argument values
+    they are inserted, otherwise the argument names are printed.
+    If options.demo is present the docstring is followed by an actual demo
+    of the macro -- this is most probably only useful in combination with
+    options.args.
+    The docstring is separated from the demo by ': ' or any value passed
+    with options.docsep.
+    Asking for a non-existent key will trigger a warning and return a warning
+    message to the document.
+--]]
+    options = self:check_options(options)
+    options.single = true
+    local docstring = self:_docstring(key, options)
+    local result = string.format([[\mintinline{tex}{%s}]], docstring)
+    if options.demo then result = result..string.format([[
+%s%s
+]], options.demosep or ': ', docstring)
+    end
+    return result
+end
+
+function Builtins.docstrings:minted(key, options)
+--[[
+    Return a docstring wrapped in a {minted} environment.
+    If options.args contains a comma-separated list of argument values
+    they are inserted, otherwise the argument names are printed.
+    If options.demo is present the docstring is followed by an actual demo
+    of the macro -- this is most probably only useful in combination with
+    options.args.
+    The docstring is separated from the demo by a \par\noindent or any value
+    passed with options.docsep.
+    Asking for a non-existent key will trigger a warning and return a warning
+    message to the document.
+--]]
+    options = self:check_options(options)
+    local docstring = self:_docstrings(key, options)
+    local result = string.format([[
+\begin{minted}{tex}
+%s
+\end{minted}
+]], docstring)
+    if options.demo then
+        result = result..string.format([[
+%s
+%s
+]], options.demosep or [[\par
+]], docstring)
+    end
+    return result
+end
+
 
 handle_dependencies()
 
