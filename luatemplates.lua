@@ -23,18 +23,25 @@ local err, warn, info, log = luatexbase.provides_module({
 local Templates = {}
 local Builtins = {}
 
+
+local function handle_dependencies()
 --[[
-    Ensure that a color package is loaded,
-    otherwise require xcolor.
+Handle some dependencies
+Ensure that a color package is loaded,
+otherwise require xcolor.
 --]]
-if template_opts.color then
-    colors = [[
+    if template_opts['self-documentation'] then
+        Templates:write_latex([[\RequirePackage{minted}
+]])
+    elseif template_opts.color then
+        -- Only do this when minted hasn't been loaded before
+        Templates:write_latex([[
 \makeatletter
 \@ifpackageloaded{xcolor}{}
 {\@ifpackageloaded{color}{}{\RequirePackage{xcolor}}}
 \makeatother
-]]
-    tex.print(colors:explode('\n'))
+]])
+    end
 end
 
 function Templates:setup(var_name, config)
@@ -709,7 +716,15 @@ function Templates:_write(content, color)
         if color == 'default' then color = template_opts['default-color'] end
         content = self:wrap_macro('textcolor', { color, content })
     end
-    tex.print(content:explode('\n'))
+    self:write_latex(content)
+end
+
+function Templates:write_latex(latex)
+--[[
+    Convenience function because it's sometimes awkward to write
+    long strings, having to use an intermediate variable.
+--]]
+    tex.print(latex:explode('\n'))
 end
 
 function Templates:write(key_color, ...)
@@ -1058,5 +1073,6 @@ function Builtins:wrap_optional_arg(opt)
     end
 end
 
+handle_dependencies()
 
 return Templates
