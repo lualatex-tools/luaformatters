@@ -1215,8 +1215,7 @@ function Builtins.docstrings:inline(key, options)
     local docstring = self:_docstring(key, options)
     local result = string.format([[\mintinline{tex}{%s}]], docstring)
     if options.demo then result = result..string.format([[
-%s%s
-]], options.demosep or ': ', docstring)
+%s%s]], options.demosep or ': ', docstring)
     end
     return result
 end
