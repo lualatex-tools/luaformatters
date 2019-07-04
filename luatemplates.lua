@@ -329,7 +329,7 @@ function Templates:create_macro(entry)
     TODO: Also (optionally) create a documentation string.
 --]]
     -- NOTE: entry is nil if the name starts with an underscore, so it is skipped.
-    if not entry then return end
+    if not entry or entry.name:sub(1,1) == '_' then return end
 
     -- Set up variables
     local arg_cnt, arg_num = 0, ''
