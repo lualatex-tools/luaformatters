@@ -26,3 +26,13 @@
     kpse.find_file("luatemplates.lua") or "luatemplates.lua"
   )
 }
+
+% TODO:
+% Reimplement that as a luatemplates definition, once
+% https://github.com/uliska/luatemplates/issues/12
+% is implemented.
+\newcommand*{\luatemplatesSetOption}[2]{
+\directlua{template_opts.set_option(template_opts,
+  '\luatexluaescapestring{#1}',
+  '\luatexluaescapestring{#2}')}
+}
