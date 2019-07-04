@@ -836,6 +836,8 @@ function Builtins:add_element(base, element, separator)
 --]]
     if base == '' then
         return element
+    elseif element == '' then
+        return base
     else
         local sep = separator or template_opts['element-separator']
         if not separator then
@@ -876,7 +878,7 @@ function Builtins:case(case, text)
         upper = [[\uppercase{%s}]],
         lower = [[\lowercase{%s}]]
     }
-    return string.format(templates[case], text)
+    return string.format(templates[case or 'normal'], text)
 end
 
 function Builtins:emph(text)
@@ -933,13 +935,13 @@ function Builtins:list_format(text, options)
             end
         end
     end
-    return self:list_join({
+    return self:list_join(elements, {
         separator = options.separator or template_opts['list-sep'],
         last_sep = options.last_sep or template_opts['list-last-sep'],
-    }, elements)
+    })
 end
 
-function Builtins:list_join(options, list)
+function Builtins:list_join(list, options)
 --[[
     Join a list of strings with ', '.
     If the list is empty an empty string is returned.
@@ -985,7 +987,7 @@ function Builtins:number(text, options)
     options = self:check_options(options)
     if tonumber(text) or text:find('\\') then return text end
     return self:format('case',
-        options['number-case'] or template_opts['number-case'],
+        options['number-case'],
         text)
 end
 
@@ -1015,45 +1017,28 @@ function Builtins:range(text, options)
     --]]
     options = self:check_options(options)
     local from, to = self:split_range(text)
-    if not to then return self:number(text)
+    if not to then return self:number(text, options)
     elseif to == 'f' then
         local range_follow = options['range-follow'] or template_opts['range-follow']
-        return self:number(from) .. range_follow
+        return self:number(from, options) .. range_follow
     elseif to == 'ff' then
         local range_ffollow = options['range-ffollow'] or template_opts['range-ffollow']
-        return self:number(from) .. range_ffollow
+        return self:number(from, options) .. range_ffollow
     else
         local range_sep = options['range-sep'] or template_opts['range-sep']
-        return self:number(from) .. range_sep .. self:number(to)
+        return self:number(from, options) .. range_sep .. self:number(to, options)
     end
 end
 
-function Builtins:range_list(text)
+function Builtins:range_list(text, options)
 --[[
     Format a list using 'range' as the formatter.
     This is to make the range list (e.g. for page ranges) easily accessible
     as a built-in formatter.
 --]]
-    return self:list_format(text, { formatter = 'range' })
-end
-
-function Builtins:shorthand(key)
---[[
-    Return the string stored as shorthand for the given key.
-    TODO: Check if it can be removed or moved to Builtins
---]]
-    return self:formatter(key) or err('Shorthand not defined: '..key)
-end
-
-function Builtins:style(style, text)
---[[
-    Apply a style to the given text.
-    - style
-      must refer to a stored style.
-    TODO: Check if this can be removed or moved to Builtins
---]]
-    local template = self:formatter(style) or err('Style not defined: ' .. style)
-    return self:_replace(template, { text = text })
+    options = self:check_options(options)
+    options.formatter = 'range'
+    return self:list_format(text, options)
 end
 
 function Builtins:wrap_kv_option(key, value)
