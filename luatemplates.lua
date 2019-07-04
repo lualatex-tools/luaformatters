@@ -198,7 +198,6 @@ function Templates:check_args(entry)
     depending on whether the formatter is a function or a template.
     Updates the given table and doesn't return a value.
 --]]
-    local has_options
     if type(entry.f) == 'function' then
         -- ignore any given arguments for functions
         entry.args = {}
@@ -211,17 +210,15 @@ function Templates:check_args(entry)
             table.insert(entry.args, arg)
         end
     else -- template
+        local has_options
         if not entry.args then
             -- Check if arguments can be inferred
             entry.args, has_options = self:args_from_template(entry.f)
-            if has_options then entry.opt = '' end
         else
             -- Check validity of given arguments
             has_options = self:check_template_args(entry.args, entry.f)
-            if has_options then
-                if not entry.opt then entry.opt = '' end
-            end
         end
+        if has_options and not entry.opt then entry.opt = '' end
     end
 end
 
@@ -264,7 +261,10 @@ Available Fields:
         _args[v] = true
     end
     for _, v in ipairs(fields) do
-        if not _args[v] then
+        if v == 'options' then
+            _args.options = true
+            table.insert(args, 1, 'options')
+        elseif not _args[v] then
             warn(string.format([[
 Problem configuring template.
 Field '%s' has no matching argument
@@ -362,7 +362,7 @@ function Templates:create_macro(entry)
         '<<<args>>>', args):gsub(
         '<<<argsep>>>', argsep)
     local macro = wrapper_template:gsub('<<<lua>>>', lua_template)
-    tex.print(macro)
+    self:write_latex(macro)
 
     if template_opts['self-documentation'] then
         local doc_template = [[
@@ -1211,6 +1211,7 @@ function Builtins.docstrings:inline(key, options)
 --]]
     options = self:check_options(options)
     options.single = true
+    options.nocomment = true
     local docstring = self:_docstring(key, options)
     local result = string.format([[\mintinline{tex}{%s}]], docstring)
     if options.demo then result = result..string.format([[
