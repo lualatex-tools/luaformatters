@@ -27,6 +27,21 @@
   )
 }
 
+% Create an instance of lua_templates
+% - #1: variable name prefix
+%       The variable #1_templates will become a global Lua variable
+%       referencing the Templates object.
+% - #2: Lua module filename
+%       Name of a file (which has to be available to 'require')
+%       This file must return a configuration table.
+\newcommand*{\setupLuaTemplates}[2]{%
+  \directlua{
+    lua_templates:setup(
+      [[\string#1]]..'_templates',
+      require([[\string#2]]))
+  }
+}
+
 % TODO:
 % Reimplement that as a luatemplates definition, once
 % https://github.com/uliska/luatemplates/issues/12
