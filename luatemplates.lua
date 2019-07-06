@@ -328,8 +328,12 @@ function Templates:create_macro(entry)
 
     TODO: Also (optionally) create a documentation string.
 --]]
-    -- NOTE: entry is nil if the name starts with an underscore, so it is skipped.
-    if not entry or entry.name:sub(1,1) == '_' then return end
+    -- NOTE: return nil if the name starts with an underscore, so it is skipped.
+    if entry.name:sub(1,1) == '_' then
+        -- discard the underscore, *then* return nil
+--        entry.name = entry.name:sub(2)
+        return
+    end
 
     -- Set up variables
     local arg_cnt, arg_num = 0, ''
@@ -586,7 +590,6 @@ function Templates:process_entry(name, entry)
 --]]
     entry.name = entry.name or name
     entry.color = entry.color or 'default'
-    if entry.name:sub(1, 1) == '_' then return end
     entry.comment = entry.comment or ''
     self:check_args(entry)
     return entry
