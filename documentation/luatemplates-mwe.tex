@@ -1,0 +1,19 @@
+\documentclass{article}
+
+\usepackage[color]{luatemplates}
+\setupLuaTemplates{mwe}{luatemplates-config-mwe.lua}
+
+\title{\package{luatemplates} -- MWE}
+
+\begin{document}
+\maketitle
+
+This is a \textsc{mwe} for setting up a document with \package{luatemplates}
+support.  The commands \cmd{package} and \cmd{cmd} have been set up using
+\emph{style} templates, while \cmd{XXX}, which “X-es out” a given string
+(\cmd{XXX\{foo-bar\}} => \XXX{foo-bar}) is defined as a simple formatter
+function.  Note how \emph{all} the style programming is done inside the Lua
+table (\texttt{luatemplates-config-mwe.lua}) while the interfacing between
+\LaTeX\ and Lua is done with two lines in the document preamble.
+
+\end{document}
