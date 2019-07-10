@@ -1,5 +1,5 @@
 \NeedsTeXFormat{LaTeX2e}%
-\ProvidesPackage{luatemplates}[2019/06/28 v0.5]
+\ProvidesPackage{luatemplates}[2019/07/10 v0.8]
 
 \RequirePackage{lyluatextools}
 
@@ -14,38 +14,48 @@
       'normal', 'allsmallcaps', 'smallcaps', 'upper', 'lower'
       },
     ['range-follow'] = {'f.'},
-    ['range-ffollow'] = {'ff.'},
-    ['range-sep'] = {'--'},
+      ['range-ffollow'] = {'ff.'},
+      ['range-sep'] = {'--'},
+      ['range-input-sep'] = {'-'},
     ['list-sep'] = { '{, }'},
     ['list-last-sep'] = {' and '},
     ['self-documentation'] = {'false', 'true', ''},
+      ['demosep-inline'] = { ': '},
+      ['demosep-minted'] = { [[
+
+]] },
+      ['doc-comment'] = {'true', 'false', ''},
   })
 }
+
+% Instantiate the main Templates table.
+% Make it available as a global lua_templates variable
 \directlua{
   lua_templates = require(
     kpse.find_file("luatemplates.lua") or "luatemplates.lua"
   )
 }
 
-% Create an instance of lua_templates
-% - #1: variable name prefix
-%       The variable #1_templates will become a global Lua variable
-%       referencing the Templates object.
+% Add a “client” to lua_templates
+% - #1: client name
+%       has to be unique among all clients registered with luatemplates
+%       (within one document, including all loaded packages)
 % - #2: Lua module filename
 %       Name of a file (which has to be available to 'require')
-%       This file must return a configuration table.
-\newcommand*{\setupLuaTemplates}[2]{%
+%       This file must return a templatestable.
+\newcommand*{\addLuaTemplates}[2]{%
   \directlua{
     lua_templates:setup(
-      [[\string#1]]..'_templates',
-      require([[\string#2]]))
+      [[\string#1]],
+      require(
+        kpse.find_file([[\string#2]]) or [[\string#2]]))
   }
 }
 
-% TODO:
-% Reimplement that as a luatemplates definition, once
-% https://github.com/uliska/luatemplates/issues/12
-% is implemented.
+% Macro to change a package option during the document.
+% Boolean values have to be specified explicitly (different from setting
+% *package* options on loading).
+% Note that not all options can *reasonably* be changed after loading.
 \newcommand*{\luatemplatesSetOption}[2]{
 \directlua{template_opts.set_option(template_opts,
   '\luatexluaescapestring{#1}',
