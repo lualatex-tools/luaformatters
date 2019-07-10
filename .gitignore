@@ -45,3 +45,7 @@ luac.out
 *.pdf
 *.log
 *.aux
+*.pyg
+*.fdb_latexmk
+*.fls
+*.synctex.gz
