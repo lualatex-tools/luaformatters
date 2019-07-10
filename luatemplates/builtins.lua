@@ -34,6 +34,7 @@ local err, warn, info, log = luatexbase.provides_module({
 local Formatters = {}
 
 local BUILTINS = {
+    name = 'builtins',
     formatters = Formatters,
     docstrings = {}
 }
@@ -420,4 +421,4 @@ if template_opts['self-documentation'] then
     Formatters.docstrings_minted.color = 'nocolor'
 end
 
-return BUILTINS
+return lua_templates:new(BUILTINS)

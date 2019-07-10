@@ -1,4 +1,5 @@
-local MWE = {
+local MWE = lua_templates:new{
+    name = 'mwe',
     formatters = {
         cmd = [[\texttt{\textbf{\textbackslash <<<name>>>}}]],
         package = {

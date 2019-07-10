@@ -34,10 +34,16 @@ local Templates = {
     _client_order_rev = {},
 }
 Templates.__index = Templates
+_G['lua_templates'] = Templates
 
 local Formatter = require('luatemplates.formatter')
+local TemplatesTable = require('luatemplates.templates-table')
 
-function Templates:setup(name, client)
+function Templates:new(properties)
+    return TemplatesTable:new(properties)
+end
+
+function Templates:add(client)
 --[[
     Register a new client.
     Store the complete client table in self._clients[name]
@@ -47,14 +53,12 @@ function Templates:setup(name, client)
     Process additional configuration.
     Create LaTeX macros.
 --]]
+
     -- TODO: Handle conflicts (prevent, overwrite, update)
-    self._clients[name] = client
-    table.insert(self._client_order_rev, 1, name)
-    setmetatable(client, self)
+    self._clients[client:name()] = client
+    table.insert(self._client_order_rev, 1, client:name())
     -- TODO: Document that the client will get these fields set
     -- (so if they'd use them they'd get overridden)
-    client.name = name
-    client.prefix = client.prefix or ''
 
     -- Process the entries in client.formatter
     self:register_formatters(client)
@@ -110,7 +114,7 @@ Error configuring command entry.
 No formatter found at key: %s]], properties.key))
     end
     formatter:update(properties)
-    self._formatters[client.name][macro_name] = formatter
+    self._formatters[client:name()][macro_name] = formatter
 -- TODO: Clarify what this was meant to do, if it is needed or not:
 --    self._formatters[formatter:parent().name][key] = nil
 --    formatter:set_parent(client)
@@ -133,7 +137,7 @@ function Templates:create_macros(client)
     Create the LaTeX macros from the non-hidden formatters in a client.
 --]]
     local macro
-    for key, formatter in pairs(self._formatters[client.name]) do
+    for key, formatter in pairs(self._formatters[client:name()]) do
         macro = formatter:macro()
         if macro then
             self:write_latex(macro)
@@ -200,13 +204,13 @@ function Templates:register_formatters(client)
     Replace the original entry (table) with a reference to that
     Formatter object.
 --]]
-    self._formatters[client.name] = {}
+    self._formatters[client:name()] = {}
 
     local function register_formatters(key, root)
         --[[
             Recursively walk the client's `formatters` tree
             and register all the formatters in a flat table at
-            self._formatters[client.name]
+            self._formatters[client:name()]
         --]]
         local function next_key(next)
             if key == '' then
@@ -220,7 +224,7 @@ function Templates:register_formatters(client)
             local next = next_key(k)
             if Formatter:is_formatter(v) then
                 formatter = Formatter:new(client, next, v)
-                self._formatters[client.name][next] = formatter
+                self._formatters[client:name()][next] = formatter
                 root[k] = formatter
             else
                 register_formatters(next, v)
@@ -399,6 +403,6 @@ end
 handle_dependencies()
 
 -- Register the built-in formatters.
-Templates.setup(Templates, 'builtin', require('luatemplates.builtins'))
+Templates:add(require('luatemplates.builtins'))
 
 return Templates

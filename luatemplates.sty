@@ -29,12 +29,8 @@
 }
 
 % Instantiate the main Templates table.
-% Make it available as a global lua_templates variable
-\directlua{
-  lua_templates = require(
-    kpse.find_file("luatemplates.lua") or "luatemplates.lua"
-  )
-}
+% Is now available as a global variable `lua_templates`
+\directlua{require(kpse.find_file("luatemplates.lua") or "luatemplates.lua")}
 
 % Add a “client” to lua_templates
 % - #1: client name
@@ -43,12 +39,9 @@
 % - #2: Lua module filename
 %       Name of a file (which has to be available to 'require')
 %       This file must return a templatestable.
-\newcommand*{\addLuaTemplates}[2]{%
+\newcommand*{\addLuaTemplates}[1]{%
   \directlua{
-    lua_templates:setup(
-      [[\string#1]],
-      require(
-        kpse.find_file([[\string#2]]) or [[\string#2]]))
+    lua_templates:add(require(kpse.find_file([[\string#1]]) or [[\string#1]]))
   }
 }
 

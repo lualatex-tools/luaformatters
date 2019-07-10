@@ -25,7 +25,7 @@ local MANUAL = {
         which may be useful for writing packages to avoid name clashes with
         other packages.
     --]]
-    prefix = '',
+    name = 'manual',
     --[[
         Declare all formatters.
     --]]
@@ -205,4 +205,4 @@ function MANUAL.formatters:Bar(text)
     return result
 end
 
-return MANUAL
+return lua_templates:new(MANUAL)

@@ -493,7 +493,7 @@ function Formatter:make_name(key)
 --]]
     key = key or self._key
     local nodes = key:explode('.')
-    local result = self:parent().prefix
+    local result = self:parent():prefix()
     for _, node in ipairs(nodes) do
         if result == '' then result = result .. node
         else result = result .. node:sub(1,1):upper() .. node:sub(2)
