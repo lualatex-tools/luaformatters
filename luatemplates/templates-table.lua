@@ -77,7 +77,7 @@ function TemplatesTable:add_formatters(...)
             if not comment then
                 comment = arg
             else
-                root = self:node(arg)
+                root = self:node(arg, true)
             end
         else
             root = root or self.formatters
@@ -88,14 +88,41 @@ function TemplatesTable:add_formatters(...)
     end
 end
 
+function TemplatesTable:configure_formatter(key, properties)
+--[[
+    Apply manual configuration to a given item.
+    This can be used to expose hidden (e.g. built-in) formatters as
+    LaTeX macros, or to extend the configuration of registered formatters,
+    typically used for formatter functions that have been defined
+    with the standalone `function Templates:<name>` syntax.
+    If `properties` is a string it is considered to be the formatter's new name.
+    To publish a hidden formatter the `name` field must be provided with a
+    string that doesn't start with an underscore.
+    - locate the formatter by the `key` field
+      This may refer to a formatter in this table or to one of another,
+      previously registered client.
+      NOTE: It is only possible to “unhide” formatters from other clients,
+      updating the configuration of a formatter that has already created
+      a LaTeX macro in another client will fail.
+    - update all fields in the formatter with the given data.
+    - register the formatter also in the *current client's* formatter subtree
+      (otherwise it wouldn't be created as a macro)
+--]]
+    if type(properties) == 'string' then
+        properties = { name = properties }
+    end
+    self.configuration[key] = properties
+end
+
 function TemplatesTable:name()
     return self._name
 end
 
-function TemplatesTable:node(path)
+function TemplatesTable:node(path, create)
 --[[
-    Return a node in the TemplatesTabel.formatters subtree,
-    creating nodes along the way if necessary.
+    Return a node in the TemplatesTable.formatters subtree,
+    creating nodes along the way if necessary (and the `create`
+    argument is true).
 --]]
     root = self.formatters
     if path == '' then return root end
@@ -104,9 +131,11 @@ function TemplatesTable:node(path)
         next_node = cur_node[k]
         if next_node then
             cur_node = next_node
-        else
+        elseif create then
             cur_node[k] = {}
             cur_node = cur_node[k]
+        else
+            return
         end
     end
     return cur_node

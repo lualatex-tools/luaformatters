@@ -84,41 +84,31 @@ function Templates:check_options(options)
     end
 end
 
-function Templates:configure_formatter(client, macro_name, properties)
+function Templates:configure_formatter(client, key, properties)
 --[[
     Apply manual configuration for a given item.
-    This can be used to expose hidden (e.g. built-in) formatters as
-    LaTeX macros, or to extend the configuration of registered formatters,
-    typically used for formatter functions that have been defined
-    with the standalone `function Templates:<name>` syntax.
     - locate the formatter by the `key` field
-    - give the formatter the explicit name.
+      (will find the formatter in reverse order of addition)
     - update all fields in the formatter with the given data.
-    - register the formatter in the *current client's* formatter subtree
-      (otherwise it wouldn't be created as a macro)
-    - TODO: clarify if assuming ownership is necessary/correct
-      (see commented code at the end of the function)
+    - If `properties` is a string it is considered to be the
+      formatter's new name.
+    - If a name property is present (macro is renamed),
+      add a copy of the Formatter entry in the current client's
+      entries table to trigger the creation of a macro
 --]]
     if type(properties) == 'string' then
-        key = properties
-        properties = {}
-    else
-        key = properties.key
+        properties = { name = properties }
     end
-    -- set the formatter's name to be `macro_name`
-    properties.name = macro_name
 
     local formatter = self:formatter(key)
     if not formatter then err(string.format([[
 Error configuring command entry.
-No formatter found at key: %s]], properties.key))
+No formatter found at key: %s]], key))
     end
     formatter:update(properties)
-    self._formatters[client:name()][macro_name] = formatter
--- TODO: Clarify what this was meant to do, if it is needed or not:
---    self._formatters[formatter:parent().name][key] = nil
---    formatter:set_parent(client)
-
+    if properties.name then
+        self._formatters[client:name()][key] = formatter
+    end
 end
 
 function Templates:configure_formatters(client)

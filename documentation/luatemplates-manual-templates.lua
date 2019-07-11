@@ -191,22 +191,25 @@ function MANUAL.formatters:Bar(text)
     return result
 end
 
+--[[
+    Publish built-in formatters by using arbitrary names without underscores.
+    An entry's value may either be the new name or a formatter entry table.
+--]]
 MANUAL:add_configuration('Publish built-in formatters', {
-    --[[
-        Publish built-in formatters, using arbitrary names.
-    --]]
-    names = 'list_format',
+    list_format = 'names',
     range = 'range',
-    pages = 'range_list',
+    range_list = {
+        name = 'pages',
+        color = 'magenta'
+    },
 })
 
-MANUAL:add_configuration('Configure functions', {
-    -- Add configuration (= a comment) to a function defined elsewhere
-    -- (in this case above in the table constructor).
-    reverse = {
-        key = 'reverse',
-        comment = 'Reverse the given string, optionally in small caps.'
-    }
+--[[
+    Configure a single formatter.
+    Here too a name field could be given, or the name alone as a string.
+--]]
+MANUAL:configure_formatter('reverse', {
+    comment = 'Reverse the given string, optionally in small caps.'
 })
 
 return MANUAL
