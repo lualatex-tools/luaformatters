@@ -79,6 +79,11 @@ function Formatters:docstring_inline(key, options)
     options.nocomment = true
 
     local formatter = self:formatter(key)
+    if not formatter then err(string.format([[
+Docstring requested, but no formatter found at key
+%s
+]], key))
+    end
     local docstring = formatter:docstring(options)
     local result = string.format([[\mintinline{tex}{%s}]], docstring)
     if options.demo then result = result..string.format([[
