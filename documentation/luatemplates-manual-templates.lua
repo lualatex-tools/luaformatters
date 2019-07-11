@@ -134,6 +134,38 @@ MANUAL:add_formatter('literature.book_alternative', {
 })
 
 --[[
+    By default formatters can only be added to existing nodes in the
+    `formatters` subtable (this can be switched off by providing
+    `strict = false` in the new() constructor).
+    `provide_namespace()` takes an array of keys and creates the corresponding
+    nodes for subsequent additions to work.
+--]]
+MANUAL:provide_namespace{
+    'music.composer',
+    'music.work'
+}
+
+--[[
+    The following two formatters can be added
+    thanks to the previous namespace provision.
+--]]
+MANUAL:add_formatter('music.composer.name', {
+    f = [[\emph{<<<name>>>}]],
+    color = 'magenta',
+})
+
+MANUAL:add_formatter('music.work.source', {
+    f = [[\textsc{<<<abbreviation>>>}]],
+    color = 'olive',
+})
+
+--[=[
+    The following would fail because 'music.locations' is not in the namespace
+    (try uncommenting and see the error message)
+MANUAL:add_formatter('music.locations.concert_hall', [[\textbf{<<<name>>>}]])
+--]=]
+
+--[[
     Standalone definition of functions.
     Note that these can also assign functions to nested tables,
     but these have to be created beforehand.
