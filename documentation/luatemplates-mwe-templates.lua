@@ -13,10 +13,9 @@ MWE:add_formatters('arbitrary comment', {
     },
 })
 
-MWE:configure_formatter('bold', 'myBold')
-
-MWE:configure_formatter('cmd', {
-    color = 'magenta'
-})
+MWE:add_configuration{
+    bold = 'myBold',
+    cmd = { color = 'magenta' }
+}
 
 return MWE
