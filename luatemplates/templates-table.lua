@@ -20,8 +20,16 @@ function TemplatesTable:new(properties)
 --[[
     Create new instance.
     The argument may either be a name or a table with at least a `name` field.
-    Additionally it may include a `prefix` field and `formatters` and
-    `configuration` subtables.
+    Optional table fields:
+    - `prefix`
+      prefix to use for generated macro names
+    - `strict`
+      if set to true formatters may only be added to existing subtables
+      (either created manually or through TemplatesTables:provide_namespace)
+    - `formatters`
+      (nested) table with formatters
+    - `configuration`
+      flat table with formatter configuration entries
 --]]
     if type(properties) == 'string' then
         properties = { name = properties }
@@ -35,6 +43,11 @@ function TemplatesTable:new(properties)
         formatters = properties.formatters or {},
         configuration = properties.configuration or {}
     }
+    if properties.strict == nil then
+        o._strict = true
+    else
+        o._strict = properties.strict
+    end
     setmetatable(o, TemplatesTable)
     return o
 end
@@ -61,16 +74,34 @@ function TemplatesTable:add_configuration(...)
     end
 end
 
+local function err_namespace(key)
+    if type(key) == 'table' then
+        key = table.concat(key, '.')
+    end
+    err(string.format([[
+    Trying to add formatters
+    at non-existing key
+    %s
+    To allow this either create
+    the node manually or through
+    TemplatesTable:provide_namespace(),
+    or set the 'strict' property
+    for this table to 'false'.
+    ]], key))
+end
+
 function TemplatesTable:add_formatter(key, formatter)
 --[[
     Add a single formatter at a specific key.
     - `key`
-      Address in dot-notation. Node is created if not present.
+      Address in dot-notation.
+      Node is created if not present and table's `strict` property is true
     - `formatter`
       Formatter in any of the accepted forms:
       template string, function or formatter entry table
 --]]
-    local parent, last_key = self:parent_node(key, true)
+    local parent, last_key = self:parent_node(key, not self._strict)
+    if not parent then err_namespace(key) end
     parent[last_key] = formatter
 end
 
@@ -79,8 +110,9 @@ function TemplatesTable:add_formatters(...)
     Add a number of formatters to the table.
     The variable arguments may consist of zero to two strings plus a table.
     The first string is a noop comment, just for documenting the input file.
-    The second string is the root node in the formatters table - if this node
-    (or any intermediate nodes) doesn't exist it will silently be created.
+    The second string is the root node in the formatters table -
+    if this node doesn't exist and the table's `strict` property is true
+    it will silently be created.
     The table maps keys to formatter entries.
 --]]
     local args = {...}
@@ -90,7 +122,8 @@ function TemplatesTable:add_formatters(...)
             if not comment then
                 comment = arg
             else
-                root = self:node(arg, true)
+                root = self:node(arg, not self._strict)
+                if not root then err_namespace(arg) end
             end
         else
             root = root or self.formatters
