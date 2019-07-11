@@ -179,4 +179,15 @@ function TemplatesTable:prefix()
     return self._prefix or ''
 end
 
+function TemplatesTable:provide_namespace(keys)
+--[[
+    Verify the existence or create nodes for all given keys.
+    This can serve as documentation and to simplify coding
+    for standalone function definitions.
+--]]
+    for _, v in ipairs(keys) do
+        _ = self:node(v, true)
+    end
+end
+
 return TemplatesTable
