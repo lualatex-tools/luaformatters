@@ -10,74 +10,61 @@ local err, warn, info, log = luatexbase.provides_module({
 
 --[[
     Demo configuration file for the luatemplates package's MWE.
-    This file defines and returns one Lua table MANUAL with the following structure:
-        MANUAL = {
-            formatters = ...,
-            configuration = ...,
-        }
-    This table will then be passed to Templates:setup to automagically produce
-    the full set of LaTeX commands.
+    This module defines and returns one TemplatesTable and returns it
+    The returned table will then be passed to Templates:add()
+    to automagically produce the full set of LaTeX commands.
 --]]
 
+-- Create a new TemplatesTable instance by referencing the global
+-- `lua_templates` variable
 local MANUAL = lua_templates:new('manual')
 
+-- Add formatters, grouped by category.
+-- (Note that the first string does have no meaning, it's just a comment)
 MANUAL:add_formatters('Shorthands', {
     --[[
-    *Shorthands* are text strings that are returned as-is.
-    Basically the same could be achieved by simply using \newcommand in
-    LaTeX, but the shorthands will also be available to other formatting
-    functions, and they benefit from the package's color handling.
-    For each shorthand a LaTeX command with the corresponding name will
-    automatically be created.
+        Simplest form of defining shorthands:
+        key (converted to macro name) and resulting string:
     --]]
-    -- Simplest form of defining shorthands (2 examples): key and string:
-    -- shorthand to save typing and provide consistency, e.g. for brand names
-    cary = [[Mary Flagler Cary Music Collection \emph{(Pierpont Morgan Library)}]],
-    -- shorthand to ensure orthotypographic consistency
     BaB = [[B\,\&\,B]],
-    -- Declaration of a 'formatter entry table'
-    -- This is to show how formatters can be reused (in the 'image' macro).
-    -- In a real-world project this would of course be more complex to
-    -- point to a real media directory.
+
+    --[[
+        Resulting macro names must be possible.
+    --]]
+    -- emph = [[\emph{} has already been defined.]],
+
+    --[[
+        Declaration as a 'formatter entry table'.
+        Mandatory field: `f`, everything else is inferred if necessary
+    --]]
+    -- This macro is (re)used in the `image` macro.
+    -- 'nocolor' is used because we will want the bare text to be used in LaTeX.
     mediadir = {
-        comment = 'relative path to a media directory',
         f = './media',
+        comment = 'relative path to a media directory',
         color = 'nocolor',
     },
-    -- names must be valid for LaTeX macros:
-    --emph = [[\emph{} has already been defined.]],
 
-    -- the returned string must result in valid LaTeX code.
-    -- \broken would result in an error. It can be defined but not used.
-    -- Therefore it is “hidden” through the leading underscore.
-    _broken = [[\emph{would result in invalid LaTeX]],
+    --[[
+        Hide the formatter.
+        This formatter will be accessible through self:format('hidden'),
+        but no LaTeX macro created.
+    --]]
+    hidden = {
+        f = [[This would only be used by other Formatters
+              but not from LaTeX]],
+        name = '_hidden',
+    },
 })
 
-MANUAL:add_formatters('Styles', {
-        --[[
-        *Styles*: Templates with *one* mandatory argument
-    --]]
+MANUAL:add_formatters('Styles (templates with one mandatory argument)', {
         -- simple style
         textbfit = [[\textbf{\textit{<<<text>>>}}]],
-        -- style with additional text element (actually used for the MWE)
+        -- style with additional textual element
         cmd = {
             f = [[\texttt{\textbf{\textbackslash <<<name>>>}}]],
             color = 'nocolor',
             comment = 'Typeset a command name (without explicit argument support)'
-        },
-        luavar = {
-            f = [[\texttt{<<<name>>>}]],
-            comment = 'A Lua name/variable'
-        },
-        package = {
-            f = [[\texttt{<<<name>>>}]],
-            comment = 'A LaTeX package, Lua module etc.',
-            color = 'olive'
-        },
-        DV = {
-            f = [[\textsc{d}\,<<<dnumber>>>]],
-            color = 'cyan',
-            comment = 'Deutsch-Verzeichnis (= Schubert catalogue)',
         },
         -- includes an <<<options>>> field plus *one* named field,
         -- can therefore be inferred without an 'args' field.
@@ -89,48 +76,37 @@ MANUAL:add_formatters('Styles', {
         },
 })
 
-MANUAL:add_formatters('Templates', {
+MANUAL:add_formatters('Templates (templates with more than one argument)', {
     --[[
-        *Templates*: templates with more than one named field.
+        A template with multiple mandatory and one optional argument.
+        The optional argument is indicated by an 'options' replacement
+        field.  Since there is more than one mandatory argument, the
+        'args' table has to be provided (note that the 'image' field is
+        used twice in the template).  'nocolor' is required here because
+        a 'figure' environment can't be wrapped in a \textcolor command.
     --]]
-        literature = {
-            --[[
-                Table can be nested, so commands inside get a mixedCase name:
-                \literatureBook
-            --]]
-            book = {
-                f = [[<<<title>>>\textsuperscript{(ed.\,<<<edition>>>)}]],
-                args = { 'title', 'edition' },
-            },
-            book_alternative = {
-                name = 'bookShort',
-                comment = 'A book definition for inline use',
-                f = [[\textbf{<<<author>>>}: \emph{<<<title>>>} (<<<year>>>)]],
-                color = 'magenta',
-                args = {'author', 'title', 'year'},
-                -- opt does not make sense here
-            },
+    floatImage = {
+        f = [[
+\begin{figure}
+\centering
+\includegraphics[<<<options>>>]{\mediadir/<<<image>>>}
+\caption{<<<caption>>>}
+\label{fig:<<<image>>>}
+\end{figure}
+]],
+        args = {'image', 'caption'},
+        color = 'nocolor',
+    },
+    --[[
+        Table can be nested, so commands inside get a mixedCase name:
+        \literatureBook
+    --]]
+    literature = {
+        book = {
+            f = [[<<<title>>>\textsuperscript{(ed.\,<<<edition>>>)}]],
+            args = { 'title', 'edition' },
         },
-            --[[
-                A template with multiple mandatory and an optional argument.
-                The optional argument is indicated by an 'options' replacement
-                field.  Since there is more than one mandatory argument, the
-                'args' table has to be provided (note that the 'image' field is
-                used twice in the template).  'nocolor' is required here because
-                a 'figure' environment can't be wrapped in a \textcolor command.
-            --]]
-            floatImage = {
-                f = [[
-    \begin{figure}
-    \centering
-    \includegraphics[<<<options>>>]{\mediadir/<<<image>>>}
-    \caption{<<<caption>>>}
-    \label{fig:<<<image>>>}
-    \end{figure}
-    ]],
-                args = {'image', 'caption'},
-                color = 'nocolor',
-            },
+    },
 })
 
 MANUAL:add_formatters('functions', {
@@ -143,35 +119,18 @@ MANUAL:add_formatters('functions', {
         Note that in this way of definition the 'self' argument has to be
         specified explicitly, without the : notation.
     --]]
-        -- A simple formatter with one argument.
-        reverse = function (self, text, options)
-            options = self:check_options(options)
-            local result = text:reverse()
-            if options.smallcaps then
-                result = self:wrap_macro('textsc', result)
-            end
-            return result
-        end,
-        --[[
-            A somewhat more complex function, although still with one
-            argument only. This one makes use of a builtin formatter.
-            Defined in the full table syntax, which is slightly awkward.
-            I would recommend defining the function separately and
-            configure it in the configuration section.
-        --]]
-        check_range = {
-            name = 'checkRange', -- underscores can't be used in LaTeX macros
-            comment = 'Demonstrate the use of built-in functions function.',
-            opt = 'foo=bar',
-            f = function (self, options, text)
-                local processed = self:format('range', text)
-                if processed ~= text then
-                    text = processed .. string.format([[ (input was: \texttt{\{%s\}})]], text)
-                end
-                return text
-            end
-        },
-        foo = function(self, text) return '|' .. text .. '|' end,
+    -- a simple function with one named argument
+    foo = function(self, text) return '|' .. text .. '|' end,
+})
+
+
+MANUAL:add_formatter('literature.book_alternative', {
+    name = 'bookShort',
+    comment = 'A book definition for inline use',
+    f = [[\textbf{<<<author>>>}: \emph{<<<title>>>} (<<<year>>>)]],
+    color = 'magenta',
+    args = {'author', 'title', 'year'},
+    -- opt does not make sense here
 })
 
 --[[
@@ -180,19 +139,76 @@ MANUAL:add_formatters('functions', {
     but these have to be created beforehand.
 --]]
 function MANUAL.formatters:X(text)
+-- A simple formatter with one argument
     return text:gsub('.', 'X')
 end
 
-function MANUAL.formatters:Bar(text)
-    local result = ''
-    for i=1, #text, 1 do
-        result = result .. self.foo:apply(text:sub(i, i))
+function MANUAL.formatters:reverse(text, options)
+--[[
+    A slightly more complex function with one named and an optional argument.
+    The `options` string is parsed into a table with self:check_options(options)
+--]]
+    options = self:check_options(options)
+    local result = text:reverse()
+    if options.upper then
+        result = result:upper()
     end
     return result
 end
 
 --[[
-    Publish built-in formatters by using arbitrary names without underscores.
+    A somewhat more complex function, although still with one
+    argument only. This one makes use of a builtin formatter
+    through self:format(). Formatters to be reused this way can
+    be built-in, defined in the same client package or in another
+    client that has been added to the templates.
+    NOTE: The function name `check_range` will produce a
+    *macro* name `\checkRange`.
+--]]
+function MANUAL.formatters:check_range(text)
+    local processed = self:format('range', text)
+    if processed ~= text then
+        text = processed .. string.format([[ (input was: \texttt{\{%s\}})]], text)
+    end
+    return text
+end
+
+--[[
+    Alternative approaches to use a formatter from *the same*
+    TemplatesTable instance:
+    - self.foo also finds the Formatter item that is actually
+      stored at self.formatters:foo.
+      On this object the `apply()` method has to be called.
+    - targeting the formatter is also possible with the array
+      of client name and formatter key.
+    Both approaches may be used to guarantee that the formatter
+    in the *current* TemplatesTable is found and not another one
+    that might have the same key.
+--]]
+function MANUAL.formatters:Bar(text)
+    local result = ''
+    for i=1, #text, 1 do
+        result = result .. self:format('foo', text:sub(i, i))
+--        result = result .. self.foo:apply(text:sub(i, i))
+--        result = result .. self:format({ 'manual', 'foo' }, text:sub(i, i))
+    end
+    return result
+end
+
+--[[
+    Configure a single formatter.
+    Add the given fields to the formatter entry table.
+    If this includes the `name` property (or the second argument is a string)
+    the formatter is renamed (and possibly published through that).
+--]]
+MANUAL:configure_formatter('reverse', {
+    comment = 'Reverse the given string, optionally in small caps.'
+})
+
+--[[
+    Publish built-in formatters by using arbitrary names without underscores
+    (NOTE: the built-in formatters have names that (unlike their keys) have
+     leading underscores).
     An entry's value may either be the new name or a formatter entry table.
 --]]
 MANUAL:add_configuration('Publish built-in formatters', {
@@ -205,11 +221,10 @@ MANUAL:add_configuration('Publish built-in formatters', {
 })
 
 --[[
-    Configure a single formatter.
-    Here too a name field could be given, or the name alone as a string.
+    Formatters that are actually *used* in the manual but that don't
+    show any new features or techniques.
 --]]
-MANUAL:configure_formatter('reverse', {
-    comment = 'Reverse the given string, optionally in small caps.'
-})
+local additionals = require('luatemplates-manual-additional-templates.lua')
+MANUAL:add_formatters('Additional used formatters', additionals.formatters)
 
 return MANUAL

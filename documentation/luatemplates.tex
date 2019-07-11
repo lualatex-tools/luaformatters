@@ -160,11 +160,11 @@ throughout this document) without any further set-up work.  And a Lua function
 \begin{minted}{lua}
 function MY_TEMPLATES.formatters:reverse(text, options)
     options = self:check_options(options)
-    if options.smallcaps then
-        result = self:wrap_macro('textsc', text:reverse())
-    else
-        return text:reverse()
+    local result = text:reverse()
+    if options.upper then
+        result = result:upper()
     end
+    return result
 end
 \end{minted}
 
@@ -173,7 +173,7 @@ argument that can be used like
 
 \luaMacroDoc[demo,nocomment,%
 demosep=\par\noindent producing ,%
-args={smallcaps,The brown fox}]{reverse}%
+args={upper,The brown fox}]{reverse}%
 in the output.  There are four things
 to highlight at this point, which are detailed further in the following sections
 of the manual:
@@ -1594,16 +1594,18 @@ an empty string.
 \pagebreak
 
 
-\subsection{A Basic Sample Configuration File}
+\subsection{A Sample Configuration File}
 \label{sec:basic-sample-config}
 
-The following listing shows one working configuration file
-(\texttt{luatemplates-basic-templates.lua}, reduced from the actual file used
-for this manual). It is very sparsely commented in order not to reduce clarity,
-and it aims at providing just the minimal material necessary to show all
-options.
+The following listing shows the working configuration file
+\texttt{luatemplates-manual-templates.lua} which is actually used for producing
+this manual. It is thoroughly commented and aims at being a concise but
+comprehensive demonstration of the available tools and options.  In order to
+achieve this goal it is obviously less cleanly structured than a real-world file
+would be, and it is planned to add further example files demonstrating
+particular techniques and approaches.
 
-\inputminted{lua}{luatemplates-basic-templates.lua}
+\inputminted[firstline=11]{lua}{luatemplates-manual-templates.lua}
 
 \enlargethispage*{4\baselineskip}
 \end{document}
