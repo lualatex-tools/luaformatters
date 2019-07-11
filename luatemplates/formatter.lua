@@ -242,7 +242,7 @@ but package option 'self-documentation' seems not to be active
     local result = ''
 
     -- Prepend a line comment if present and not disabled
-    if (not options.nocomment or template_opts['doc-comment'])
+    if (not options.nocomment and template_opts['doc-comment'])
     and self:comment() ~= '' then
         result = string.format([[
 %% %s
