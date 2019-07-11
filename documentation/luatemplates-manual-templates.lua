@@ -19,47 +19,42 @@ local err, warn, info, log = luatexbase.provides_module({
     the full set of LaTeX commands.
 --]]
 
-local MANUAL = {
-    --[[
-        If present all generated macros are prefixed with this string,
-        which may be useful for writing packages to avoid name clashes with
-        other packages.
-    --]]
-    name = 'manual',
-    --[[
-        Declare all formatters.
-    --]]
-    formatters = {
-        --[[
-        *Shorthands* are text strings that are returned as-is.
-        Basically the same could be achieved by simply using \newcommand in
-        LaTeX, but the shorthands will also be available to other formatting
-        functions, and they benefit from the package's color handling.
-        For each shorthand a LaTeX command with the corresponding name will
-        automatically be created.
-        --]]
-        -- Simplest form of defining shorthands (2 examples): key and string:
-        -- shorthand to save typing and provide consistency, e.g. for brand names
-        cary = [[Mary Flagler Cary Music Collection \emph{(Pierpont Morgan Library)}]],
-        -- shorthand to ensure orthotypographic consistency
-        BaB = [[B\,\&\,B]],
-        -- Declaration of a 'formatter entry table'
-        -- This is to show how formatters can be reused (in the 'image' macro).
-        -- In a real-world project this would of course be more complex to
-        -- point to a real media directory.
-        mediadir = {
-            comment = 'relative path to a media directory',
-            f = './media',
-            color = 'nocolor',
-        },
-        -- names must be valid for LaTeX macros:
-        --emph = [[\emph{} has already been defined.]],
+local MANUAL = lua_templates:new('manual')
 
-        -- the returned string must result in valid LaTeX code.
-        -- \broken would result in an error. It can be defined but not used.
-        -- Therefore it is “hidden” through the leading underscore.
-        _broken = [[\emph{would result in invalid LaTeX]],
+MANUAL:add_formatters('Shorthands', {
     --[[
+    *Shorthands* are text strings that are returned as-is.
+    Basically the same could be achieved by simply using \newcommand in
+    LaTeX, but the shorthands will also be available to other formatting
+    functions, and they benefit from the package's color handling.
+    For each shorthand a LaTeX command with the corresponding name will
+    automatically be created.
+    --]]
+    -- Simplest form of defining shorthands (2 examples): key and string:
+    -- shorthand to save typing and provide consistency, e.g. for brand names
+    cary = [[Mary Flagler Cary Music Collection \emph{(Pierpont Morgan Library)}]],
+    -- shorthand to ensure orthotypographic consistency
+    BaB = [[B\,\&\,B]],
+    -- Declaration of a 'formatter entry table'
+    -- This is to show how formatters can be reused (in the 'image' macro).
+    -- In a real-world project this would of course be more complex to
+    -- point to a real media directory.
+    mediadir = {
+        comment = 'relative path to a media directory',
+        f = './media',
+        color = 'nocolor',
+    },
+    -- names must be valid for LaTeX macros:
+    --emph = [[\emph{} has already been defined.]],
+
+    -- the returned string must result in valid LaTeX code.
+    -- \broken would result in an error. It can be defined but not used.
+    -- Therefore it is “hidden” through the leading underscore.
+    _broken = [[\emph{would result in invalid LaTeX]],
+})
+
+MANUAL:add_formatters('Styles', {
+        --[[
         *Styles*: Templates with *one* mandatory argument
     --]]
         -- simple style
@@ -92,6 +87,9 @@ local MANUAL = {
             color = 'nocolor',
             opt = 'width=2cm',
         },
+})
+
+MANUAL:add_formatters('Templates', {
     --[[
         *Templates*: templates with more than one named field.
     --]]
@@ -133,6 +131,9 @@ local MANUAL = {
                 args = {'image', 'caption'},
                 color = 'nocolor',
             },
+})
+
+MANUAL:add_formatters('functions', {
     --[[
         *Formatter functions*
         These *can* be specified directly within the table
@@ -171,22 +172,7 @@ local MANUAL = {
             end
         },
         foo = function(self, text) return '|' .. text .. '|' end,
-    },
-    configuration = {
-        --[[
-            Publish built-in formatters, using arbitrary names.
-        --]]
-        names = 'list_format',
-        range = 'range',
-        pages = 'range_list',
-        -- Add configuration (= a comment) to a function defined elsewhere
-        -- (in this case above in the table constructor).
-        reverse = {
-            key = 'reverse',
-            comment = 'Reverse the given string, optionally in small caps.'
-        }
-    }
-}
+})
 
 --[[
     Standalone definition of functions.
@@ -205,4 +191,22 @@ function MANUAL.formatters:Bar(text)
     return result
 end
 
-return lua_templates:new(MANUAL)
+MANUAL:add_configuration('Publish built-in formatters', {
+    --[[
+        Publish built-in formatters, using arbitrary names.
+    --]]
+    names = 'list_format',
+    range = 'range',
+    pages = 'range_list',
+})
+
+MANUAL:add_configuration('Configure functions', {
+    -- Add configuration (= a comment) to a function defined elsewhere
+    -- (in this case above in the table constructor).
+    reverse = {
+        key = 'reverse',
+        comment = 'Reverse the given string, optionally in small caps.'
+    }
+})
+
+return MANUAL
