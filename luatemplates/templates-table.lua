@@ -61,6 +61,19 @@ function TemplatesTable:add_configuration(...)
     end
 end
 
+function TemplatesTable:add_formatter(key, formatter)
+--[[
+    Add a single formatter at a specific key.
+    - `key`
+      Address in dot-notation. Node is created if not present.
+    - `formatter`
+      Formatter in any of the accepted forms:
+      template string, function or formatter entry table
+--]]
+    local parent, last_key = self:parent_node(key, true)
+    parent[last_key] = formatter
+end
+
 function TemplatesTable:add_formatters(...)
 --[[
     Add a number of formatters to the table.
@@ -126,8 +139,9 @@ function TemplatesTable:node(path, create)
 --]]
     root = self.formatters
     if path == '' then return root end
+    if type(path) == 'string' then path = path:explode('.') end
     local cur_node, next_node = root
-    for _, k in ipairs(path:explode('.')) do
+    for _, k in ipairs(path) do
         next_node = cur_node[k]
         if next_node then
             cur_node = next_node
@@ -139,6 +153,26 @@ function TemplatesTable:node(path, create)
         end
     end
     return cur_node
+end
+
+function TemplatesTable:parent_node(key, create)
+--[[
+    Retrieve the parent node from a given dot-list key.
+    Return the parent node and the trailing key element.
+    If `create` is true then missing nodes are created along the way.
+    Otherwise if no node is found return nil and nil.
+--]]
+    if key == '' then return nil, nil end
+    local root = self.formatters
+    local path = key:explode('.')
+    if #path == 1 then return root, key end
+    local last_key = table.remove(path, #path)
+    local parent = self:node(path, create)
+    if parent then
+        return parent, last_key
+    else
+        return nil, nil
+    end
 end
 
 function TemplatesTable:prefix()
