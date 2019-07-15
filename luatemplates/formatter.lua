@@ -416,12 +416,12 @@ end
 
 function Formatter:is_hidden()
 --[[
-    A formatter is considered “hidden” if its name starts with an underscore.
-    (This may be the original key or an explicitly given name).
+    A formatter is considered “hidden” if its name or any segment of its key
+    starts with an underscore.
     A hidden formatter may still be used through Templates:format(),
     but no LaTeX macro is generated.
 --]]
-    return self._name:sub(1, 1) == '_'
+    if self._name:sub(1, 1) == '_' then return true end
 end
 
 function Formatter:key()
@@ -495,6 +495,7 @@ function Formatter:make_name(key)
     local nodes = key:explode('.')
     local result = self:parent():prefix()
     for _, node in ipairs(nodes) do
+        if node:sub(1,1) == '_' then return '_' end
         if result == '' then result = result .. node
         else result = result .. node:sub(1,1):upper() .. node:sub(2)
         end
