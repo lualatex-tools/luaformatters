@@ -76,11 +76,14 @@ function Templates:check_options(options)
     Make sure that an options argument is a processed table (even if empty).
     Should be used by any formatter function having an optional argument.
 --]]
-    if type(options) == 'table' then
-        return options
+    if not options then return {}
+    elseif type(options) == 'table' then return options
     else
-        if not options then options = '' end
-        return template_opts:check_local_options(options, true)
+        local result = template_opts:check_local_options(options, true)
+        for k, v in pairs(result) do
+            if v == '' or v == 'true' then result[k] = true end
+        end
+        return result
     end
 end
 
