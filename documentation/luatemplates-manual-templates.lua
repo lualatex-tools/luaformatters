@@ -29,6 +29,13 @@ MANUAL:add_formatters('Shorthands', {
     BaB = [[B\,\&\,B]],
 
     --[[
+        Note that a template (or function, for that matter) declared
+        by luatemplates may *use* other macros that have also been
+        produced by luatemplates:
+    --]]
+    luatemplates = [[\package{luatemplates}]],
+
+    --[[
         Resulting macro names must be possible.
     --]]
     -- emph = [[\emph{} has already been defined.]],
