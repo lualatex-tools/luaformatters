@@ -53,7 +53,7 @@ function BUILTINS:add_ssscript(direction, base, element, parenthesis)
 --]]
     if not (element and element ~= '') then return base end
     if parenthesis then element = '(' .. element .. ')' end
-    return base .. self:wrap_macro('text'..direction..'script', element)
+    return base .. self:format(direction, element)
 end
 
 
@@ -173,14 +173,14 @@ function Formatters:add_subscript(base, super, parenthesis)
 --[[
     Add a subscript the the given base string.
 --]]
-    return BUILTINS.add_ssscript(self, 'sub', base, super, parenthesis)
+    return BUILTINS.add_ssscript(self, 'subscript', base, super, parenthesis)
 end
 
 function Formatters:add_superscript(base, super, parenthesis)
 --[[
     Add a superscript the the given base string.
 --]]
-    return BUILTINS.add_ssscript(self, 'super', base, super, parenthesis)
+    return BUILTINS.add_ssscript(self, 'superscript', base, super, parenthesis)
 end
 
 function Formatters:add_element(base, element, separator)
@@ -392,6 +392,20 @@ function Formatters:range_list(text, options)
     options = self:check_options(options)
     options.formatter = 'range'
     return self:format('list_format', text, options)
+end
+
+function Formatters:subscript(text)
+--[[
+    Format text as subscript
+--]]
+    return self:wrap_macro('textsubscript', text)
+end
+
+function Formatters:superscript(text)
+--[[
+    Format text as superscript
+--]]
+    return self:wrap_macro('textsuperscript', text)
 end
 
 -----------------------------------------------------
