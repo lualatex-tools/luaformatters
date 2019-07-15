@@ -51,10 +51,10 @@ function TemplatesTable:new(properties)
     else
         o._strict = properties.strict
     end
-    if properties.namespace then
-        self:provide_namespace(properties.namespace)
-    end
     setmetatable(o, TemplatesTable)
+    if properties.namespace then
+        self.provide_namespace(o, properties.namespace)
+    end
     return o
 end
 
@@ -226,6 +226,10 @@ function TemplatesTable:provide_namespace(keys)
     The argument can be a single string or an array of strings
     (keys in dot-notation)
 --]]
+print()
+print("provide_namespace")
+print(self)
+for k, v in pairs(self) do print(k, v) end
     if type(keys) == 'string' then
         keys = { keys }
     end
