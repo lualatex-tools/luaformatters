@@ -26,6 +26,8 @@ function TemplatesTable:new(properties)
     - `strict`
       if set to true formatters may only be added to existing subtables
       (either created manually or through TemplatesTables:provide_namespace)
+    - `namespace`
+      if set (a single string or a table) create the given namespace.
     - `formatters`
       (nested) table with formatters
     - `configuration`
@@ -40,6 +42,7 @@ function TemplatesTable:new(properties)
     without specifying a name.
     ]]),
         _prefix = properties.prefix,
+        _display_name = properties.display_name or properties.name,
         formatters = properties.formatters or {},
         configuration = properties.configuration or {}
     }
@@ -47,6 +50,9 @@ function TemplatesTable:new(properties)
         o._strict = true
     else
         o._strict = properties.strict
+    end
+    if properties.namespace then
+        self:provide_namespace(properties.namespace)
     end
     setmetatable(o, TemplatesTable)
     return o
@@ -95,7 +101,7 @@ function TemplatesTable:add_formatter(key, formatter)
     Add a single formatter at a specific key.
     - `key`
       Address in dot-notation.
-      Node is created if not present and table's `strict` property is true
+      Node is created if not present and table's `strict` property is false
     - `formatter`
       Formatter in any of the accepted forms:
       template string, function or formatter entry table
@@ -111,7 +117,7 @@ function TemplatesTable:add_formatters(...)
     The variable arguments may consist of zero to two strings plus a table.
     The first string is a noop comment, just for documenting the input file.
     The second string is the root node in the formatters table -
-    if this node doesn't exist and the table's `strict` property is true
+    if this node doesn't exist and the table's `strict` property is false
     it will silently be created.
     The table maps keys to formatter entries.
 --]]
@@ -217,7 +223,12 @@ function TemplatesTable:provide_namespace(keys)
     Verify the existence or create nodes for all given keys.
     This can serve as documentation and to simplify coding
     for standalone function definitions.
+    The argument can be a single string or an array of strings
+    (keys in dot-notation)
 --]]
+    if type(keys) == 'string' then
+        keys = { keys }
+    end
     for _, v in ipairs(keys) do
         _ = self:node(v, true)
     end
