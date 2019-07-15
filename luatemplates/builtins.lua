@@ -370,15 +370,16 @@ function Formatters:range(text, options)
     The package options can also be overridden by the optional `options` table.
     --]]
     options = self:check_options(options)
+    local formatter = options.formatter or 'number'
     local from, to = self:split_range(text)
-    if not to then return self:format('number', text, options)
+    if not to then return self:format(formatter, text, options)
     elseif to:sub(1, 1) == 'f' then
         local follow_key = 'range-'..to..'ollow'
         local follow = options[follow_key] or template_opts[follow_key]
-        return self:format('number', from, options) .. follow
+        return self:format(formatter, from, options) .. follow
     else
         local range_sep = options['range-sep'] or template_opts['range-sep']
-        return self:format('number', from, options) .. range_sep .. self:format('number', to, options)
+        return self:format(formatter, from, options) .. range_sep .. self:format(formatter, to, options)
     end
 end
 
