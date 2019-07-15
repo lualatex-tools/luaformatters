@@ -48,7 +48,17 @@ self-documentation, % Create the self-documentation commands
 % luatemplates-manual-config.lua must be findable by LaTeX.
 \addLuaTemplates{luatemplates-manual-templates}
 
-\title{\package{luatemplates}}
+% Add further templates files. Separate clients are added to be able to
+% *list* them at the end of the manual.
+\addLuaTemplates{examples/closure}
+
+% Remaining functionality that is used in the manual
+% but not suitable for listings
+\addLuaTemplates{examples/additionals}
+
+\setminted[lua]{tabsize=4}
+
+\title{\luatemplates}
 \subtitle{v0.8}
 \author{Urs Liska}
 \date{\today}

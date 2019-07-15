@@ -259,11 +259,4 @@ MANUAL:add_configuration('Publish built-in formatters', {
     },
 })
 
---[[
-    Formatters that are actually *used* in the manual but that don't
-    show any new features or techniques.
---]]
-local additionals = require('luatemplates-manual-additional-templates.lua')
-MANUAL:add_formatters('Additional used formatters', additionals.formatters)
-
 return MANUAL
