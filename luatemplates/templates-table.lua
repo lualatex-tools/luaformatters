@@ -30,6 +30,9 @@ function TemplatesTable:new(properties)
       if set (a single string or a table) create the given namespace.
     - `formatters`
       (nested) table with formatters
+    - `_local`
+      (nested) table with local formatters (available only
+      from within the client)
     - `configuration`
       flat table with formatter configuration entries
 --]]
@@ -44,6 +47,9 @@ function TemplatesTable:new(properties)
         _prefix = properties.prefix,
         _display_name = properties.display_name or properties.name,
         formatters = properties.formatters or {},
+        _local = properties._local or {},
+        -- will hold a flat table with dot-notation keys
+        _local_formatters = {},
         configuration = properties.configuration or {}
     }
     if properties.strict == nil then
@@ -96,7 +102,7 @@ local function err_namespace(key)
     ]], key))
 end
 
-function TemplatesTable:add_formatter(key, formatter)
+function TemplatesTable:_add_formatter(root, key, formatter)
 --[[
     Add a single formatter at a specific key.
     - `key`
@@ -106,7 +112,7 @@ function TemplatesTable:add_formatter(key, formatter)
       Formatter in any of the accepted forms:
       template string, function or formatter entry table
 --]]
-    local parent, last_key = self:parent_node(key, not self._strict)
+    local parent, last_key = self:parent_node(key, root, not self._strict)
     if not parent then err_namespace(key) end
     parent[last_key] = formatter
 end
@@ -114,6 +120,7 @@ end
 function TemplatesTable:add_formatters(...)
 --[[
     Add a number of formatters to the table.
+    root is either self.formatters or self._local_formatters.
     The variable arguments may consist of zero to two strings plus a table.
     The first string is a noop comment, just for documenting the input file.
     The second string is the root node in the formatters table -
@@ -122,21 +129,39 @@ function TemplatesTable:add_formatters(...)
     The table maps keys to formatter entries.
 --]]
     local args = {...}
-    local comment, root
+    local root = self.formatters
+    local comment, parent
     for _, arg in ipairs(args) do
         if type(arg) == 'string' then
             if not comment then
                 comment = arg
             else
-                root = self:node(arg, not self._strict)
-                if not root then err_namespace(arg) end
+                parent = self:node(arg, root, not self._strict)
+                if not parent then err_namespace(arg) end
             end
         else
-            root = root or self.formatters
+            parent = parent or root
             for k, v in pairs(arg) do
-                root[k] = v
+                parent[k] = v
             end
         end
+    end
+end
+
+function TemplatesTable:add_formatter(key, formatter)
+-- See TemplatesTable:_add_formatter
+    self:_add_formatter(self.formatters, key, formatter)
+end
+
+function TemplatesTable:add_local_formatter(key, formatter)
+-- See TemplatesTable:_add_formatter
+    self:_add_formatter(self._local, key, formatter)
+end
+
+function TemplatesTable:add_local_formatters(formatters)
+-- See TemplatesTable:_add_formatters
+    for k, v in pairs(formatters) do
+        self:add_local_formatter(k, v)
     end
 end
 
@@ -170,13 +195,12 @@ function TemplatesTable:name()
     return self._name
 end
 
-function TemplatesTable:node(path, create)
+function TemplatesTable:node(path, root, create)
 --[[
     Return a node in the TemplatesTable.formatters subtree,
     creating nodes along the way if necessary (and the `create`
     argument is true).
 --]]
-    root = self.formatters
     if path == '' then return root end
     if type(path) == 'string' then path = path:explode('.') end
     local cur_node, next_node = root
@@ -194,7 +218,7 @@ function TemplatesTable:node(path, create)
     return cur_node
 end
 
-function TemplatesTable:parent_node(key, create)
+function TemplatesTable:parent_node(key, root, create)
 --[[
     Retrieve the parent node from a given dot-list key.
     Return the parent node and the trailing key element.
@@ -202,11 +226,10 @@ function TemplatesTable:parent_node(key, create)
     Otherwise if no node is found return nil and nil.
 --]]
     if key == '' then return nil, nil end
-    local root = self.formatters
     local path = key:explode('.')
     if #path == 1 then return root, key end
     local last_key = table.remove(path, #path)
-    local parent = self:node(path, create)
+    local parent = self:node(path, root, create)
     if parent then
         return parent, last_key
     else
@@ -226,15 +249,12 @@ function TemplatesTable:provide_namespace(keys)
     The argument can be a single string or an array of strings
     (keys in dot-notation)
 --]]
-print()
-print("provide_namespace")
-print(self)
-for k, v in pairs(self) do print(k, v) end
     if type(keys) == 'string' then
         keys = { keys }
     end
     for _, v in ipairs(keys) do
-        _ = self:node(v, true)
+        _ = self:node(v, self.formatters, true)
+        _ = self:node(v, self._local, true)
     end
 end
 

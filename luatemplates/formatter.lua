@@ -284,6 +284,19 @@ but package option 'self-documentation' seems not to be active
     return result
 end
 
+function Formatter:_format(key, ...)
+--[[
+    Locate a formatter local to the parent and apply it
+--]]
+    local formatter = self:parent()._local_formatters[key] or
+        err(string.format([[
+Formatter %s
+not found in client
+%s
+        ]], self:parent():name(), key))
+    return formatter:apply(...)
+end
+
 function Formatter:format_arg_nums()
 --[[
     Return a string used for specifying macro argument numbers

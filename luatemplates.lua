@@ -60,6 +60,8 @@ function Templates:add(client)
     -- TODO: Document that the client will get these fields set
     -- (so if they'd use them they'd get overridden)
 
+    -- Register the formatters local to the client
+    self:register_local_formatters(client)
     -- Process the entries in client.formatter
     self:register_formatters(client)
     -- Process additional configuration
@@ -189,43 +191,52 @@ function Templates:formatter(key)
     end
 end
 
+function Templates:_register_formatters(client, key, root, _local)
+    --[[
+        Recursively walk the client's `formatters` tree
+        and register all the formatters in a flat table at
+        self._formatters[client:name()]
+    --]]
+    local function next_key(next)
+        if key == '' then
+            return next
+        else
+            return key .. '.' .. next
+        end
+    end
+    local formatter
+    for k, v in pairs(root) do
+        local next = next_key(k)
+        if Formatter:is_formatter(v) then
+            formatter = Formatter:new(client, next, v)
+            if _local then
+                client._local_formatters[next] = formatter
+            else
+                self._formatters[client:name()][next] = formatter
+            end
+            root[k] = formatter
+        else
+            self:_register_formatters(client, next, v, _local)
+        end
+    end
+end
+
 function Templates:register_formatters(client)
 --[[
     Recursively visit all formatter entries in client,
     create Formatter objects from them and register them in
     Templates's formatter table.
-    Replace the original entry (table) with a reference to that
-    Formatter object.
 --]]
     self._formatters[client:name()] = {}
+    self:_register_formatters(client, '', client.formatters)
+end
 
-    local function register_formatters(key, root)
-        --[[
-            Recursively walk the client's `formatters` tree
-            and register all the formatters in a flat table at
-            self._formatters[client:name()]
-        --]]
-        local function next_key(next)
-            if key == '' then
-                return next
-            else
-                return key .. '.' .. next
-            end
-        end
-        local formatter
-        for k, v in pairs(root) do
-            local next = next_key(k)
-            if Formatter:is_formatter(v) then
-                formatter = Formatter:new(client, next, v)
-                self._formatters[client:name()][next] = formatter
-                root[k] = formatter
-            else
-                register_formatters(next, v)
-            end
-        end
-    end
-
-    register_formatters('', client.formatters)
+function Templates:register_local_formatters(client)
+--[[
+    Recursively visit all local formatter entries in client,
+    create Formatter objects from them and register as local formatters.
+--]]
+    self:_register_formatters(client, '', client._local, true)
 end
 
 function Templates:split_list(str, pat)
