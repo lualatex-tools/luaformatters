@@ -79,8 +79,23 @@ function TemplatesTable:add_configuration(...)
         if type(arg) == 'string' then
             comment = arg
         else
-            for k, v in pairs(arg) do
-                root[k] = v
+            for key, formatter in pairs(arg) do
+                local parent, entry_key = self:parent_node(key, self.formatters)
+                if not entry_key then
+                    err(string.format([[
+Trying to configure formatter entry
+but no formatter found at key
+%s
+]], key))
+                end
+                local entry = parent[entry_key]
+                if type(entry) == 'string' or type(entry) == 'function' then
+                    parent[entry_key] = { f = entry }
+                    entry = parent[entry_key]
+                end
+                for k,v in pairs(formatter) do
+                    entry[k] = v
+                end
             end
         end
     end

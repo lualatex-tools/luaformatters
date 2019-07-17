@@ -1,0 +1,17 @@
+\documentclass{article}
+
+\RequirePackage{luatemplates}
+\addLuaTemplates{validate-options.lua}
+
+\begin{document}
+\section*{Validating Optional Arguments}
+
+\doFormat[formatter=italic]{This is some formatted text}
+
+This is a configurable \gap{gap}, just to show that options
+can be forced to be \LaTeX\gap[distance=0.25ex]{lengths}.
+
+This will \gap[formatter=bold]{have} no impact, but
+%this will \gap[formatter=green]{fail} anyway.
+
+\end{document}
