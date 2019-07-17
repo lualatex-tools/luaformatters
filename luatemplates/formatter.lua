@@ -60,12 +60,18 @@ function Formatter:new(parent, key, formatter)
     o._parent = parent
     -- initialize macro name, may be overridden if 'name' property is given
     o._name = Formatter.make_name(o, key)
+    -- assign options declaration if given
+    if formatter.options then
+        o._options = lyluatex_options.Opts:new(nil, formatter.options)
+        formatter.options = nil
+    end
     -- copy all properties that are given explicitly
     Formatter.update(o, formatter)
-    -- If formatter is a function overwrite Formatter:format()
+    -- If formatter is a function overwrite Formatter:apply()
     if type(o._f) == 'function' then
         o.apply = o._f
     end
+
     return o
 end
 
@@ -136,13 +142,45 @@ function Formatter:check_options(options)
 --[[
     Make sure that an options argument is a processed table (even if empty).
     Should be used by any formatter function having an optional argument.
+
+    If the formatter has an options declaration it is guaranteed that the
+    returned table has all the options, with default or given values.
 --]]
-    if not options then return {}
-    elseif type(options) == 'table' then return options
+    local result = {}
+    if self._options then
+        -- preset with values from declarations
+        for k,v in pairs(self._options.options) do
+            result[k] = v
+        end
+    end
+    if not options then return result
+    elseif type(options) == 'table' then
+        --[[
+            If the options argument is already a table we can assume it
+            already has been validated (TODO: is that true?),
+            so we only overwrite the defaults with the given values.
+        --]]
+        for k, v in pairs(options) do
+            result[k] = v
+        end
+        return result
     else
-        local result = template_opts:check_local_options(options, true)
-        for k, v in pairs(result) do
-            if v == '' or v == 'true' then result[k] = true end
+        -- finally have the string parsed and validated
+        local loc_opts
+        if self._options then
+            -- use the formatter's option declaration
+            loc_opts = self._options:check_local_options(options)
+        else
+            -- use the package's generic tool without validation
+            loc_opts = template_opts:check_local_options(options, true)
+        end
+        for k, v in pairs(loc_opts) do
+            -- TODO: This should be fixed in lyluatex-options?
+            if v == '' or v == 'true' then v = true end
+            if self._options then
+                self._options:validate_option(k, { [k] = v })
+            end
+            result[k] = v
         end
         return result
     end
@@ -421,7 +459,7 @@ function Formatter:has_options()
 --[[
     Return the argument index of the optional argument (if present) or nil.
 --]]
-    return self._options
+    return self._opt_index
 end
 
 function Formatter:is_formatter(obj)
@@ -585,7 +623,7 @@ function Formatter:set_args_from_function()
     for i=2, arg_cnt, 1 do -- skip the 'self' argument
         arg = debug.getlocal(formatter, i)
         if arg == 'options' then
-            self._options = i - 1
+            self._opt_index = i - 1
         end
         table.insert(self._args, arg)
     end
@@ -603,7 +641,7 @@ function Formatter:set_args_from_template()
     for i, v in ipairs(fields) do
         if v == 'options' then
             max = max + 1
-            self._options = i
+            self._opt_index = i
         end
         if i > max then
             err(string.format([[
@@ -639,7 +677,7 @@ function Formatter:template_fields()
         local i = 0
         local template = self._f
         if template:find('options') then
-            self._options = 1
+            self._opt_index = 1
             table.insert(self._fields, 'options')
             _result.options = true
         end
