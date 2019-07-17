@@ -971,6 +971,25 @@ end
 (\luavar{(formatters.)music.composers} in this example) already exists.
 
 
+\subsubsection{Adding Local Formatters}
+\label{sec:usage:adding-local-formatters}
+
+A second type of formatters are \term[Local Formatter]{Local Formatters}.  These
+are mostly identical to ordinary formatters with the exception that they are
+only available for use within the current client, and that they are never
+accessible to \LaTeX\ macros.
+
+Local formatters are added with the functions
+\luavar{lua\_templates:add\_local\_formatter()} and \luavar{lua\_templates:add\_local\_formatters()}
+that apart from registering the formatters to a different storage location
+behave identically to the functions described in the previous section.
+
+Local formatter functions can be defined with the standalone syntax as well,
+only that instead of the \luavar{formatters} subtable they have to be located
+within \luavar{\_local}.  They can be equally nested, and the behaviour regarding
+the namespace is identical to regular formatters.
+
+
 \subsubsection{Formatter Entries}
 \label{sec:usage-formatter-entries}
 
@@ -2072,6 +2091,20 @@ local result = self:format('foo', {
 \end{minted}
 
 
+\paragraph{\luavar{\_format} (key, ...)}
+
+Apply a registered local \term{Formatter}
+
+Local formatters are only available to the \term{Client} where they have been
+registered.  They behave \emph{nearly} identical to regular formatters except
+for two differences, which are the result from the fact that local formatters
+\emph{never} produce \LaTeX\ macros:  local formatters are not limited to nine
+named arguments, and -- more importantly -- they don't have to return one single
+string. Instead they can return arbitrary data types or multiple return values.
+Apart form that handling is identical to the \luavar{format()} function
+described just above.
+
+
 \paragraph{\luavar{split\_list} (text, pattern)}
 
 Split a text to a list at a given pattern.
@@ -2330,6 +2363,14 @@ particular techniques and approaches.
 
 \enlargethispage*{4\baselineskip}
 
+\subsection{Real-World Example}
+\label{sec:examples:real-world-example}
+
+The following file is copied from a real-world example to demonstrate a number of techniques.  Note that \emph{all} of the project's dedicated macros have been concentrated in this Lua file, but note also that it will probably not be directly usable outside of that context.
+
+\inputminted{lua}{examples/schubert-templates.lua}
+
+
 \subsection{Specific Examples}
 \label{sec:specific-examples}
 
@@ -2339,6 +2380,7 @@ separate files which are all added as \term[Client]{Clients} to the manual's
 \term{Templates Library}, while others are created separately and are accessible
 through corresponding \texttt{.tex} files in the \texttt{documentation/examples}
 subdirectory of the repository.
+
 
 \subsubsection{Closures}
 \label{sec:examples-closures}
@@ -2355,5 +2397,13 @@ The file \texttt{examples/closures.lua} is made available to \texttt{luatemplate
 Table}.  Basically this is done for all further examples.
 
 \inputminted{lua}{examples/closure.lua}
+
+
+\subsubsection{Local Formatters}
+\label{sec:examplese:local-formatters}
+
+\inputminted{lua}{examples/local-formatters.lua}
+
+\inputminted{tex}{examples/local-formatters.tex}
 
 \end{document}
