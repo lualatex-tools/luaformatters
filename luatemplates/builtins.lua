@@ -34,6 +34,7 @@ local err, warn, info, log = luatexbase.provides_module({
 local Formatters = {}
 
 local BUILTINS = {
+    name = 'builtins',
     formatters = Formatters,
     docstrings = {}
 }
@@ -52,7 +53,7 @@ function BUILTINS:add_ssscript(direction, base, element, parenthesis)
 --]]
     if not (element and element ~= '') then return base end
     if parenthesis then element = '(' .. element .. ')' end
-    return base .. self:wrap_macro('text'..direction..'script', element)
+    return base .. self:format(direction, element)
 end
 
 
@@ -78,6 +79,11 @@ function Formatters:docstring_inline(key, options)
     options.nocomment = true
 
     local formatter = self:formatter(key)
+    if not formatter then err(string.format([[
+Docstring requested, but no formatter found at key
+%s
+]], key))
+    end
     local docstring = formatter:docstring(options)
     local result = string.format([[\mintinline{tex}{%s}]], docstring)
     if options.demo then result = result..string.format([[
@@ -167,14 +173,14 @@ function Formatters:add_subscript(base, super, parenthesis)
 --[[
     Add a subscript the the given base string.
 --]]
-    return BUILTINS.add_ssscript(self, 'sub', base, super, parenthesis)
+    return BUILTINS.add_ssscript(self, 'subscript', base, super, parenthesis)
 end
 
 function Formatters:add_superscript(base, super, parenthesis)
 --[[
     Add a superscript the the given base string.
 --]]
-    return BUILTINS.add_ssscript(self, 'super', base, super, parenthesis)
+    return BUILTINS.add_ssscript(self, 'superscript', base, super, parenthesis)
 end
 
 function Formatters:add_element(base, element, separator)
@@ -364,15 +370,16 @@ function Formatters:range(text, options)
     The package options can also be overridden by the optional `options` table.
     --]]
     options = self:check_options(options)
+    local formatter = options.formatter or 'number'
     local from, to = self:split_range(text)
-    if not to then return self:format('number', text, options)
+    if not to then return self:format(formatter, text, options)
     elseif to:sub(1, 1) == 'f' then
         local follow_key = 'range-'..to..'ollow'
         local follow = options[follow_key] or template_opts[follow_key]
-        return self:format('number', from, options) .. follow
+        return self:format(formatter, from, options) .. follow
     else
         local range_sep = options['range-sep'] or template_opts['range-sep']
-        return self:format('number', from, options) .. range_sep .. self:format('number', to, options)
+        return self:format(formatter, from, options) .. range_sep .. self:format(formatter, to, options)
     end
 end
 
@@ -385,6 +392,20 @@ function Formatters:range_list(text, options)
     options = self:check_options(options)
     options.formatter = 'range'
     return self:format('list_format', text, options)
+end
+
+function Formatters:subscript(text)
+--[[
+    Format text as subscript
+--]]
+    return self:wrap_macro('textsubscript', text)
+end
+
+function Formatters:superscript(text)
+--[[
+    Format text as superscript
+--]]
+    return self:wrap_macro('textsuperscript', text)
 end
 
 -----------------------------------------------------
@@ -420,4 +441,4 @@ if template_opts['self-documentation'] then
     Formatters.docstrings_minted.color = 'nocolor'
 end
 
-return BUILTINS
+return lua_templates:new(BUILTINS)

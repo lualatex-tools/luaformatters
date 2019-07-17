@@ -34,10 +34,16 @@ local Templates = {
     _client_order_rev = {},
 }
 Templates.__index = Templates
+_G['lua_templates'] = Templates
 
 local Formatter = require('luatemplates.formatter')
+local TemplatesTable = require('luatemplates.templates-table')
 
-function Templates:setup(name, client)
+function Templates:new(properties)
+    return TemplatesTable:new(properties)
+end
+
+function Templates:add(client)
 --[[
     Register a new client.
     Store the complete client table in self._clients[name]
@@ -47,15 +53,15 @@ function Templates:setup(name, client)
     Process additional configuration.
     Create LaTeX macros.
 --]]
+
     -- TODO: Handle conflicts (prevent, overwrite, update)
-    self._clients[name] = client
-    table.insert(self._client_order_rev, 1, name)
-    setmetatable(client, self)
+    self._clients[client:name()] = client
+    table.insert(self._client_order_rev, 1, client:name())
     -- TODO: Document that the client will get these fields set
     -- (so if they'd use them they'd get overridden)
-    client.name = name
-    client.prefix = client.prefix or ''
 
+    -- Register the formatters local to the client
+    self:register_local_formatters(client)
     -- Process the entries in client.formatter
     self:register_formatters(client)
     -- Process additional configuration
@@ -72,49 +78,42 @@ function Templates:check_options(options)
     Make sure that an options argument is a processed table (even if empty).
     Should be used by any formatter function having an optional argument.
 --]]
-    if type(options) == 'table' then
-        return options
+    if not options then return {}
+    elseif type(options) == 'table' then return options
     else
-        if not options then options = '' end
-        return template_opts:check_local_options(options, true)
+        local result = template_opts:check_local_options(options, true)
+        for k, v in pairs(result) do
+            if v == '' or v == 'true' then result[k] = true end
+        end
+        return result
     end
 end
 
-function Templates:configure_formatter(client, macro_name, properties)
+function Templates:configure_formatter(client, key, properties)
 --[[
     Apply manual configuration for a given item.
-    This can be used to expose hidden (e.g. built-in) formatters as
-    LaTeX macros, or to extend the configuration of registered formatters,
-    typically used for formatter functions that have been defined
-    with the standalone `function Templates:<name>` syntax.
     - locate the formatter by the `key` field
-    - give the formatter the explicit name.
+      (will find the formatter in reverse order of addition)
     - update all fields in the formatter with the given data.
-    - register the formatter in the *current client's* formatter subtree
-      (otherwise it wouldn't be created as a macro)
-    - TODO: clarify if assuming ownership is necessary/correct
-      (see commented code at the end of the function)
+    - If `properties` is a string it is considered to be the
+      formatter's new name.
+    - If a name property is present (macro is renamed),
+      add a copy of the Formatter entry in the current client's
+      entries table to trigger the creation of a macro
 --]]
     if type(properties) == 'string' then
-        key = properties
-        properties = {}
-    else
-        key = properties.key
+        properties = { name = properties }
     end
-    -- set the formatter's name to be `macro_name`
-    properties.name = macro_name
 
     local formatter = self:formatter(key)
     if not formatter then err(string.format([[
 Error configuring command entry.
-No formatter found at key: %s]], properties.key))
+No formatter found at key: %s]], key))
     end
     formatter:update(properties)
-    self._formatters[client.name][macro_name] = formatter
--- TODO: Clarify what this was meant to do, if it is needed or not:
---    self._formatters[formatter:parent().name][key] = nil
---    formatter:set_parent(client)
-
+    if properties.name then
+        self._formatters[client:name()][key] = formatter
+    end
 end
 
 function Templates:configure_formatters(client)
@@ -133,7 +132,7 @@ function Templates:create_macros(client)
     Create the LaTeX macros from the non-hidden formatters in a client.
 --]]
     local macro
-    for key, formatter in pairs(self._formatters[client.name]) do
+    for key, formatter in pairs(self._formatters[client:name()]) do
         macro = formatter:macro()
         if macro then
             self:write_latex(macro)
@@ -192,43 +191,52 @@ function Templates:formatter(key)
     end
 end
 
+function Templates:_register_formatters(client, key, root, _local)
+    --[[
+        Recursively walk the client's `formatters` tree
+        and register all the formatters in a flat table at
+        self._formatters[client:name()]
+    --]]
+    local function next_key(next)
+        if key == '' then
+            return next
+        else
+            return key .. '.' .. next
+        end
+    end
+    local formatter
+    for k, v in pairs(root) do
+        local next = next_key(k)
+        if Formatter:is_formatter(v) then
+            formatter = Formatter:new(client, next, v)
+            if _local then
+                client._local_formatters[next] = formatter
+            else
+                self._formatters[client:name()][next] = formatter
+            end
+            root[k] = formatter
+        else
+            self:_register_formatters(client, next, v, _local)
+        end
+    end
+end
+
 function Templates:register_formatters(client)
 --[[
     Recursively visit all formatter entries in client,
     create Formatter objects from them and register them in
     Templates's formatter table.
-    Replace the original entry (table) with a reference to that
-    Formatter object.
 --]]
-    self._formatters[client.name] = {}
+    self._formatters[client:name()] = {}
+    self:_register_formatters(client, '', client.formatters)
+end
 
-    local function register_formatters(key, root)
-        --[[
-            Recursively walk the client's `formatters` tree
-            and register all the formatters in a flat table at
-            self._formatters[client.name]
-        --]]
-        local function next_key(next)
-            if key == '' then
-                return next
-            else
-                return key .. '.' .. next
-            end
-        end
-        local formatter
-        for k, v in pairs(root) do
-            local next = next_key(k)
-            if Formatter:is_formatter(v) then
-                formatter = Formatter:new(client, next, v)
-                self._formatters[client.name][next] = formatter
-                root[k] = formatter
-            else
-                register_formatters(next, v)
-            end
-        end
-    end
-
-    register_formatters('', client.formatters)
+function Templates:register_local_formatters(client)
+--[[
+    Recursively visit all local formatter entries in client,
+    create Formatter objects from them and register as local formatters.
+--]]
+    self:_register_formatters(client, '', client._local, true)
 end
 
 function Templates:split_list(str, pat)
@@ -399,6 +407,6 @@ end
 handle_dependencies()
 
 -- Register the built-in formatters.
-Templates.setup(Templates, 'builtin', require('luatemplates.builtins'))
+Templates:add(require('luatemplates.builtins'))
 
 return Templates

@@ -242,7 +242,7 @@ but package option 'self-documentation' seems not to be active
     local result = ''
 
     -- Prepend a line comment if present and not disabled
-    if (not options.nocomment or template_opts['doc-comment'])
+    if (not options.nocomment and template_opts['doc-comment'])
     and self:comment() ~= '' then
         result = string.format([[
 %% %s
@@ -282,6 +282,19 @@ but package option 'self-documentation' seems not to be active
     end
 
     return result
+end
+
+function Formatter:_format(key, ...)
+--[[
+    Locate a formatter local to the parent and apply it
+--]]
+    local formatter = self:parent()._local_formatters[key] or
+        err(string.format([[
+Formatter %s
+not found in client
+%s
+        ]], self:parent():name(), key))
+    return formatter:apply(...)
 end
 
 function Formatter:format_arg_nums()
@@ -416,12 +429,12 @@ end
 
 function Formatter:is_hidden()
 --[[
-    A formatter is considered “hidden” if its name starts with an underscore.
-    (This may be the original key or an explicitly given name).
+    A formatter is considered “hidden” if its name or any segment of its key
+    starts with an underscore.
     A hidden formatter may still be used through Templates:format(),
     but no LaTeX macro is generated.
 --]]
-    return self._name:sub(1, 1) == '_'
+    if self._name:sub(1, 1) == '_' then return true end
 end
 
 function Formatter:key()
@@ -493,8 +506,9 @@ function Formatter:make_name(key)
 --]]
     key = key or self._key
     local nodes = key:explode('.')
-    local result = self:parent().prefix
+    local result = self:parent():prefix()
     for _, node in ipairs(nodes) do
+        if node:sub(1,1) == '_' then return '_' end
         if result == '' then result = result .. node
         else result = result .. node:sub(1,1):upper() .. node:sub(2)
         end
