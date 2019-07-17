@@ -132,6 +132,22 @@ Present arguments:
     end
 end
 
+function Formatter:check_options(options)
+--[[
+    Make sure that an options argument is a processed table (even if empty).
+    Should be used by any formatter function having an optional argument.
+--]]
+    if not options then return {}
+    elseif type(options) == 'table' then return options
+    else
+        local result = template_opts:check_local_options(options, true)
+        for k, v in pairs(result) do
+            if v == '' or v == 'true' then result[k] = true end
+        end
+        return result
+    end
+end
+
 function Formatter:color()
 --[[
     Cache and return the formatter's 'color' property.
