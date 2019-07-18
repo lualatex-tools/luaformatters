@@ -240,7 +240,7 @@ function Templates:_write(content, color)
 --]]
     if template_opts.color and color ~= 'nocolor' then
         if color == 'default' then color = template_opts['default-color'] end
-        content = self:wrap_macro('textcolor', { color, content })
+        content = self:wrap_macro('textcolor', color, content )
     end
     self:write_latex(content)
 end

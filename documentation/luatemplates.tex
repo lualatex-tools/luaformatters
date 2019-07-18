@@ -2165,10 +2165,14 @@ self:wrap_kv_option('color')
 
 Wrap a value in a macro.
 
-\noindent Wrap a single value or a list of values in a \LaTeX\ macro. If
-\luavar{value} is a string it is used as a single macro argument, an array list
-is converted to a series of arguments. If the string is empty or missing one
-empty argument is added to the macro.
+\noindent Wrap an arbitrary number of values in a \LaTeX\ macro. \luavar{name}
+defines the macro to be used (without the leading backslash), while the
+remaining (zero to nine) arguments are added as macro arguments. If \emph{no}
+arguments are provided one empty argument (or separator) will be added anyway.
+If one argument is not a string but an array table its first (or only) argument
+will be used as the macro's \emph{optional} argument. (This is independent from
+the optional argument's position, although it would be most naturally put at the
+beginning or the end of the argument list.)
 
 \begin{minted}{lua}
 self:wrap_macro('mbox', 'Box this')
@@ -2176,6 +2180,12 @@ self:wrap_macro('mbox', 'Box this')
 
 self:wrap_macro('textcolor', 'red', 'colored text')
 => '\textcolor{red}{colored text}'
+
+self:wrap_macro('rule', '3cm', '1em', { '-0.5ex' })
+=> '\rule[-0.5ex]{3cm}{1em}'
+
+self:wrap_macro('myCustomMacro', { 'has only an optional argument' })
+=> \myCustomMacro[has only an optional argument]
 \end{minted}
 
 
