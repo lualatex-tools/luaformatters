@@ -137,7 +137,7 @@ Present arguments:
     end
 end
 
-function Formatter:check_options(options)
+function Formatter:check_options(options, ignore_declarations)
 --[[
     Make sure that an options argument is a processed table (even if empty).
     Should be used by any formatter function having an optional argument.
@@ -166,7 +166,7 @@ function Formatter:check_options(options)
     else
         -- finally have the string parsed and validated
         local loc_opts
-        if self._options then
+        if self._options and not ignore_declarations then
             -- use the formatter's option declaration
             loc_opts = self._options:check_local_options(options)
         else
