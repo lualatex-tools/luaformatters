@@ -160,13 +160,13 @@ function Formatter:check_options(options)
     elseif type(options) == 'table' then
         --[[
             If the options argument is already a table we can assume it
-            already has been validated (TODO: is that true?),
+            already has been validated, either through an earlier call of
+            this function or manually in Lua code (TODO: is that true?),
             so we only overwrite the defaults with the given values.
         --]]
         for k, v in pairs(options) do
             result[k] = v
         end
-        return result
     else
         -- finally have the string parsed and validated
         local loc_opts
@@ -178,15 +178,21 @@ function Formatter:check_options(options)
             loc_opts = template_opts:check_local_options(options, true)
         end
         for k, v in pairs(loc_opts) do
-            -- TODO: This should be fixed in lyluatex-options?
-            if v == '' or v == 'true' then v = true end
+            -- validate against expected values/types
             if self._options then
                 self._options:validate_option(k, { [k] = v })
             end
             result[k] = v
         end
-        return result
     end
+    -- handle boolean values, converting from strings to booleans
+    -- (NOTE: empty string represents `true`)
+    -- TODO: This should be handled/fixed in lyluatex-options?
+    for k, v in pairs(result) do
+        if v == '' or v == 'true' then result[k] = true
+        elseif v == 'false' then result[k] = false end
+    end
+    return result
 end
 
 function Formatter:color()
