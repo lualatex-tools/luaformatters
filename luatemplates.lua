@@ -216,7 +216,9 @@ function Templates:register_formatters(client)
     create Formatter objects from them and register them in
     Templates's formatter table.
 --]]
-    self._formatters[client:name()] = {}
+    if not self._formatters[client:name()] then
+        self._formatters[client:name()] = {}
+    end
     self:_register_formatters(client, '', client.formatters)
 end
 

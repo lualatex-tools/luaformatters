@@ -52,7 +52,10 @@ function Formatter:new(parent, key, formatter)
     if type(formatter) == 'string' or type(formatter) == 'function' then
         formatter = { f = formatter }
     end
-    local o = {}
+    local o = {
+        -- flag to discern from primitive Formatter Entry Table
+        _is_Formatter = true
+    }
     setmetatable(o, Formatter)
     -- key for accessing the formatter
     o._key = key

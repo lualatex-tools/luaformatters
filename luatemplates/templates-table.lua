@@ -71,30 +71,77 @@ function TemplatesTable:add_configuration(...)
     The optional string is a noop comment, just for documenting the input file.
     The table adds configuration entries to the table, adding data to existing
     or publishing hidden formatters.
+    Each entry is either a string or a Formatter Entry Table.
+    If it is a string then it will update the formatter's `name`, possibly
+    publishing a previously hidden formatter.
+      NOTE: It is not clear what happens when the name of a previously
+      *published* formatter is changed: see
+      https://github.com/uliska/luatemplates/issues/34
 --]]
-    local args = {...}
-    local root = self.configuration
-    local comment
-    for _, arg in ipairs(args) do
-        if type(arg) == 'string' then
-            comment = arg
-        else
-            for key, formatter in pairs(arg) do
-                local parent, entry_key = self:parent_node(key, self.formatters)
-                if not entry_key then
-                    err(string.format([[
+
+    local function get_formatter_entry(key)
+    --[[
+        Find an entry for the formatter requested to be modified.
+        Return the formatter's parent node and last key-element or nil, nil.
+    --]]
+        local formatter
+        -- First look up within the current client's formatters subtable
+        local parent, entry_key = self:parent_node(key, self.formatters, {
+            leaf_must_exist = true
+        })
+        if not parent then
+            -- Look for a previously registered formatter
+            formatter = lua_templates:formatter(key)
+        end
+        if formatter then return formatter end
+
+        if not parent then
+            err(string.format([[
 Trying to configure formatter entry
 but no formatter found at key
 %s
 ]], key))
+        end
+        local result = parent[entry_key]
+        -- Wrap a formatter in a Formatter Entry Table if necessary
+        if type(result) == 'string' or type(result) == 'function' then
+            parent[entry_key] = { f = result }
+            result = parent[entry_key]
+        end
+        return result
+    end
+
+
+    local args = {...}
+    local entry
+    for _, arg in ipairs(args) do
+        if type(arg) == 'string' then
+            -- do nothing, just for input clarity
+        else
+            -- Iterate over all given entries
+            for key, formatter in pairs(arg) do
+                if type(formatter) == 'string' then
+                    -- Wrap name to Formatter Entry Table
+                    formatter = { name = formatter }
                 end
-                local entry = parent[entry_key]
-                if type(entry) == 'string' or type(entry) == 'function' then
-                    parent[entry_key] = { f = entry }
-                    entry = parent[entry_key]
-                end
-                for k,v in pairs(formatter) do
-                    entry[k] = v
+                entry = get_formatter_entry(key)
+                if entry._is_Formatter then
+                    -- The formatter has already been created as an object
+                    -- and registered with a previous client
+                    entry:update(formatter)
+                    -- Store an additional reference in “our” formatters list,
+                    -- (create that if necessary)
+                    if not lua_templates._formatters[self._name] then
+                        lua_templates._formatters[self._name] = {}
+                    end
+                    lua_templates._formatters[self._name][key] = entry
+                else
+                    -- The formatter has only been provided by the current
+                    -- client. Modify in-place, Formatter object will be
+                    -- created in Templates:add()
+                    for k,v in pairs(formatter) do
+                        entry[k] = v
+                    end
                 end
             end
         end
@@ -127,7 +174,10 @@ function TemplatesTable:_add_formatter(root, key, formatter)
       Formatter in any of the accepted forms:
       template string, function or formatter entry table
 --]]
-    local parent, last_key = self:parent_node(key, root, not self._strict)
+    local parent, last_key = self:parent_node(key, root, {
+        create = not self._strict,
+        leaf_must_exist = false,
+    })
     if not parent then err_namespace(key) end
     parent[last_key] = formatter
 end
@@ -233,23 +283,33 @@ function TemplatesTable:node(path, root, create)
     return cur_node
 end
 
-function TemplatesTable:parent_node(key, root, create)
+function TemplatesTable:parent_node(key, roots, opts)
 --[[
     Retrieve the parent node from a given dot-list key.
     Return the parent node and the trailing key element.
     If `create` is true then missing nodes are created along the way.
     Otherwise if no node is found return nil and nil.
 --]]
-    if key == '' then return nil, nil end
-    local path = key:explode('.')
-    if #path == 1 then return root, key end
-    local last_key = table.remove(path, #path)
-    local parent = self:node(path, root, create)
-    if parent then
-        return parent, last_key
+
+    if not opts then opts = {} end
+    if roots then
+        roots = { roots }
     else
-        return nil, nil
+        roots = {}
+        for _, client in ipairs(self._client_order_rev) do
+            table.insert(roots, self._clients[client].formatters)
+        end
     end
+    local path = key:explode('.')
+    local last_key = table.remove(path, #path)
+    for _, root in ipairs(roots) do
+        local parent = self:node(path, root, opts.create)
+        if parent
+        and (parent[last_key] or opts.create or not opts.leaf_must_exist) then
+            return parent, last_key
+        end
+    end
+    return nil, nil
 end
 
 function TemplatesTable:prefix()
