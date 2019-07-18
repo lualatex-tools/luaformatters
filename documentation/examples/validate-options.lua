@@ -1,26 +1,51 @@
 --[[
     Validating optional arguments.
-    If an `options` table is specified when creating the Templates Table,
-    they are used to validate the optional argument in self:check_options.
-    This affects both declared *keys* and expected *values/types*
+    If an `options` table is specified in a Formatter Entry Table
+    its content is used to prepopulate and to validate a given optional
+    argument. After calling self:check_options with the given optional
+    argument (TODO: modify Formatter:apply to automatically perform this
+    conversion so a formatter function can rely on the `options` being
+    processed) the `options` variable is guaranteed to refer to a table with
+    all specified options, with default or locally given and validated values.
 --]]
 
-local FORMATTERS = lua_templates:new{
+local VALIDATION = lua_templates:new{
     name = 'form',
-    options = {
-        ['formatter'] = { 'bold', 'italic', 'superscript' },
-        ['distance']  = { '3em', template_opts.is_dim },
-    }
 }
 
-function FORMATTERS.formatters:do_format(text, options)
+function VALIDATION.formatters:do_format(text, options)
+-- Use one out of a list of built-in formatters to format the text.
     options = self:check_options(options)
     return self:format(options.formatter, text)
 end
 
-function FORMATTERS.formatters:gap(text, options)
+function VALIDATION.formatters:gap(options)
+--[[
+    Insert a gap with configurable width and optional “redaction” rule
+--]]
     options = self:check_options(options)
-    return self:wrap_macro('hspace*', options.distance) .. text
+    if options.rule then
+        return self:wrap_macro('rule',
+            options.width,
+            '1em',
+            { '-0.5ex' })
+    else
+        return self:wrap_macro('hspace*', options.width)
+    end
 end
 
-return FORMATTERS
+VALIDATION:add_configuration{
+    do_format = {
+        options = {
+            ['formatter'] = {'bold', 'italic', 'superscript'},
+        }
+    },
+    gap = {
+        options = {
+            ['width'] = { '3em', template_opts.is_dim },
+            ['rule'] = { 'false', 'true', '' },
+        }
+    }
+}
+
+return VALIDATION
