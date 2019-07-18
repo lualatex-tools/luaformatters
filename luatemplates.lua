@@ -78,22 +78,6 @@ function Templates:add(client)
 end
 
 
-function Templates:check_options(options)
---[[
-    Make sure that an options argument is a processed table (even if empty).
-    Should be used by any formatter function having an optional argument.
---]]
-    if not options then return {}
-    elseif type(options) == 'table' then return options
-    else
-        local result = template_opts:check_local_options(options, true)
-        for k, v in pairs(result) do
-            if v == '' or v == 'true' then result[k] = true end
-        end
-        return result
-    end
-end
-
 function Templates:configure_formatter(client, key, properties)
 --[[
     Apply manual configuration for a given item.
@@ -232,7 +216,9 @@ function Templates:register_formatters(client)
     create Formatter objects from them and register them in
     Templates's formatter table.
 --]]
-    self._formatters[client:name()] = {}
+    if not self._formatters[client:name()] then
+        self._formatters[client:name()] = {}
+    end
     self:_register_formatters(client, '', client.formatters)
 end
 
@@ -254,7 +240,7 @@ function Templates:_write(content, color)
 --]]
     if template_opts.color and color ~= 'nocolor' then
         if color == 'default' then color = template_opts['default-color'] end
-        content = self:wrap_macro('textcolor', { color, content })
+        content = self:wrap_macro('textcolor', color, content )
     end
     self:write_latex(content)
 end

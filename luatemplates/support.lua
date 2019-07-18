@@ -80,7 +80,7 @@ function SUPPORT:wrap_kv_option(key, value)
     end
 end
 
-function SUPPORT:wrap_macro(macro, value)
+function SUPPORT:wrap_macro(macro, ...)
 --[[
     Wrap one or multiple values in a macro invocation.
     - macro (string)
@@ -91,17 +91,22 @@ function SUPPORT:wrap_macro(macro, value)
       'mymacro', '' => \mymacro{}
       Multiple values are mapped to multiple arguments:
       'mymacro', { 'one', 'two', 'three' } => \mymacro{one}{two}{three}
+      In addition to the sequence the table may contain one named field
+      'options' whose content will be added as an optional argument:
+      'mymacro', { 'one', 'two', options = '3pt' } => \mymacro[3pt]{one}{two}
 --]]
     local result = string.format([[\%s]], macro)
-    if not value then
-        value = { '' }
-    elseif type(value) == 'string' then
-        value = { value }
+    local opt = ''
+    local args = ''
+    for _, v in ipairs{ ... } do
+        if type(v) == 'string' then
+            args = args .. string.format('{%s}', v)
+        else
+            opt = self:wrap_optional_arg(v[1])
+        end
     end
-    for _, v in ipairs(value) do
-        result = result .. string.format('{%s}', v)
-    end
-    return result
+    if args == '' and opt == '' then args = '{}' end
+    return result .. opt .. args
 end
 
 function SUPPORT:wrap_optional_arg(opt)

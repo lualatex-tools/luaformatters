@@ -74,7 +74,6 @@ function Formatters:docstring_inline(key, options)
     Asking for a non-existent key will trigger a warning and return a warning
     message to the document.
 --]]
-    options = self:check_options(options)
     options.single = true
     options.nocomment = true
 
@@ -105,7 +104,6 @@ function Formatters:docstring_minted(key, options)
     Asking for a non-existent key will trigger a warning and return a warning
     message to the document.
 --]]
-    options = self:check_options(options)
     local formatter = self:formatter(key)
     local docstring = formatter:docstring(options)
     local result = string.format([[
@@ -149,7 +147,6 @@ function Formatters:docstrings_minted(client_name, options)
     data, and there's no way how to integrate a demo for this. Options may be
     used at some point to configure the behaviour/appearance, though.)
 --]]
-    options = self:check_options(options) -- unused
     return string.format([[
 \begin{minted}{tex}
 %s
@@ -278,7 +275,6 @@ function Formatters:list_format(text, options)
       (see Formatters:range) or 'number' (see Buitlins:number).
 --]]
     if not text or text == ''  then return '' end
-    options = self:check_options(options)
 
     local elements = self:split_list(text, options.input_separator or ' and ')
     local formatter = options.formatter
@@ -314,7 +310,6 @@ function Formatters:list_join(list, options)
     for a different last separator. Considering that list compression is also
     planned it seems OK to do it manually.
 --]]
-    options = self:check_options(options)
     local sep = options.separator or ', '
     local last_sep = options.last_sep or sep
     if #list == 0 then return ''
@@ -341,7 +336,6 @@ function Formatters:number(text, options)
     'number-case' option in the passed `options`.
 --]]
     if tonumber(text) or text:find('\\') then return text end
-    options = self:check_options(options)
     return self:format('case', options['number-case'], text)
 end
 
@@ -369,7 +363,6 @@ function Formatters:range(text, options)
     which by default is '--'.
     The package options can also be overridden by the optional `options` table.
     --]]
-    options = self:check_options(options)
     local formatter = options.formatter or 'number'
     local from, to = self:split_range(text)
     if not to then return self:format(formatter, text, options)
@@ -389,7 +382,6 @@ function Formatters:range_list(text, options)
     This is to make the range list (e.g. for page ranges) easily accessible
     as a built-in formatter.
 --]]
-    options = self:check_options(options)
     options.formatter = 'range'
     return self:format('list_format', text, options)
 end

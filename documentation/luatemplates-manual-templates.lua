@@ -185,9 +185,9 @@ end
 function MANUAL.formatters:reverse(text, options)
 --[[
     A slightly more complex function with one named and an optional argument.
-    The `options` string is parsed into a table with self:check_options(options)
+    The `options` string has automatically been parsed into a table with
+    self:check_options(options)
 --]]
-    options = self:check_options(options)
     local result = text:reverse()
     if options.upper then
         result = result:upper()

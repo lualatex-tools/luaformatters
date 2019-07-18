@@ -31,10 +31,7 @@ local function term()
             return term
         else
             used_terms[ref_term] = true
-            return self:wrap_macro('textcolor', {
-                'OliveGreen',
-                term
-            })
+            return self:wrap_macro('textcolor', 'OliveGreen', term)
         end
     end
 end
