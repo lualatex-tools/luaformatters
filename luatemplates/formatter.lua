@@ -70,10 +70,6 @@ function Formatter:new(parent, key, formatter)
     end
     -- copy all properties that are given explicitly
     Formatter.update(o, formatter)
-    -- If formatter is a function overwrite Formatter:apply()
-    if type(o._f) == 'function' then
-        o.apply = o._f
-    end
 
     return o
 end
@@ -301,7 +297,6 @@ but package option 'self-documentation' seems not to be active
         return(msg)
     end
 
-    options = self:check_options(options)
     local result = ''
 
     -- Prepend a line comment if present and not disabled
@@ -397,9 +392,30 @@ end
 
 function Formatter:apply(...)
 --[[
+    Apply the formatter (called from the LaTeX macro).
+    If the formatter is a template call apply_template().
+    If it is a function check if it contains an optional argument,
+    process it with self:check_options and call the internal formatter.
+    This means that within a formatter the `options` argument is already
+    parsed and (optionally) validated.
+--]]
+    if type(self._f) == 'string' then
+        return self:apply_template(...)
+    else
+        local args = { ... }
+        local opt_index = self:has_options()
+        if opt_index then
+            local options = table.remove(args, opt_index)
+            options = self:check_options(options)
+            table.insert(args, opt_index, options)
+        end
+        return self:_f(unpack(args))
+    end
+end
+
+function Formatter:apply_template(...)
+--[[
     Use the template to format the given values.
-    NOTE: if self._f is a *function* self.format will have been
-    replaced with that function in Formatter:new()
 
     The argument(s) may be one out of:
     - a string
