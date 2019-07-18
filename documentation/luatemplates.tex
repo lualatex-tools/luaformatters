@@ -247,7 +247,6 @@ document) without any further set-up work.  And a Lua function
 \label{code:function}
 \begin{minted}{lua}
 function MANUAL.formatters:reverse(text, options)
-    options = self:check_options(options)
     local result = text:reverse()
     if options.upper then
         result = result:upper()
@@ -1110,7 +1109,7 @@ introspection.  However, it is \emph{required} for templates with more than one 
 If the formatter features an optional argument the \luavar{opt} field can be
 used to provide a default value in the generated \LaTeX\ macro.  See
 \vref{sec:templates-argument-handling} and
-\vref{sec:functions-optional-argument} for details.
+\vref{sec:defining:functions-optional-argument} for details.
 
 \begin{minted}{lua}
 MANUAL:add_formatter('halfwidth_image', {
@@ -1122,6 +1121,22 @@ MANUAL:add_formatter('halfwidth_image', {
 \noindent will create a macro whose optional argument is preset with the value
 given in the \luavar{opt} field:
 \mintinline{tex}{\halfwidthImage[width=.5\textwidth]{<<<image>>>}}.
+
+
+\paragraph{\luavar{options}}
+
+With an \luavar{options} table the optional argument can be validated and
+populated with default values.  If it is present only the declared options may
+be provided in the optional argument, and the values are validated against a
+type or a list of expected values.  Also, options that are \emph{not} included
+in the optional argument are populated with default values specified here. For
+more information see \vref{sec:defining:templates-optional-argument} and
+\vref{sec:defining:validating-optional-arguments}.  Note that while not
+\emph{technically} incompatible this options should be used \emph{alternatively}
+with the \luavar{opt} field.
+
+\NOTE{Note:} Currently validating options is only supported for formatter
+\emph{functions}, not templates.
 
 \bigskip
 
@@ -1342,6 +1357,9 @@ MANUAL:add_formatters{
 
 \noindent and produce the macro \mintinline{tex}{\floatImage[]{image}{caption}}.
 
+The optional argument can automatically be validated in formatter
+\emph{functions}, for more information see
+\vref{sec:defining:functions-optional-argument}.
 
 \subsubsection{Publishing Built-in (and other hidden) Formatters}
 \label{sec:usage:publishing-builtin-formatters}
@@ -1435,6 +1453,10 @@ more than one (mandatory) argument must be provided with an array in the
 \luavar{args} field of the \term{Formatter Entry Table} that specifies the order
 in which mandatory arguments are mapped to field names.  See the following
 sections for examples.
+
+
+\subsubsection{Optional Argument}
+\label{sec:defining:templates-optional-argument}
 
 Technically the names don't matter since they don't have to be used in the
 end-user document, but they are used in the self-documentation, so it's always a
@@ -1808,7 +1830,7 @@ Note that it is \emph{not} possible for formatters (at least if they are intende
 
 
 \subsubsection{Optional argument}
-\label{sec:functions-optional-argument}
+\label{sec:defining:functions-optional-argument}
 
 If one of the arguments specified by a formatter function is named \luavar{options} then it will be automatically mapped to a \LaTeX\ macro's optional argument.
 
@@ -1822,32 +1844,137 @@ seems most natural to put the optional argument at the end of the argument list.
 
 Optional arguments in formatter \emph{functions} are significantly more powerful
 than in string \emph{templates} because they can not only be used as simple
-string passed along to the optional argument of a \LaTeX\ macro but treated as
-real \texttt{key=value} options. When called from a \LaTeX\ macro this argument
-will initially be a (potentially empty) string. If the above macro is called as
-\mintinline{tex}{\reverse{Some Text}}, then \luavar{options} will be an empty
-string \luavar{''} inside the function, while
-\mintinline{tex}{\reverse[upper=true]} will make it contain
-\luavar{'upper=true'}, also as a string.
+strings passed along to the optional argument of a \LaTeX\ macro but are treated
+as real \texttt{key=value} options.  While originally being a string argument in \LaTeX\ the \luavar{options} variable available within the formatter function has transparently been converted to a (potentially empty) table.
+Given the \LaTeX\ macro invocation
 
-To use the variable as \texttt{key=value} data the string can be processed with the built-in support function \mintinline{lua}{options = self:check_options(options)}, which always returns a (potentially empty) table, \mintinline{lua}{{}} in the first case, \mintinline{lua}{{ upper = true }} in the second. Note that \mintinline{tex}{\reverse[upper]} will \emph{also} set the field \luavar{upper} to the boolean value \luavar{true}.
+\begin{minted}{tex}
+\reverse[upper,interval=3,parsed=false,width=.5\textwidth]{Text}
+\end{minted}
 
-\mintinline{tex}{\foo[edition=2,instruments={violin,piano}]}, as another
-example, will be converted to the table \mintinline{lua}{{ edition = '2',
-instruments = 'violin,piano' }}. Note the “number” value that will remain a
-string (which can then of course be converted manually), and the comma-separated
-list (enclosed in curly brackets) of the \luavar{instruments} option that is not
-automatically processed further but remains \emph{one} string.  This
-intermediate value can then be split into an array using the built-in function
-\mintinline{lua}{self:split_list(options.instruments, ',')}.  Built-in helper
-functionality is documented in \vref{sec:builtin-functions}.
+The \luavar{options} variable as seen inside the function is
+
+\begin{minted}{lua}
+options = {
+	upper = true,
+	interval = '3',
+	parsed = false,
+	width = '.5\textwidth'
+}
+\end{minted}
+
+\noindent Note that giving an option without a value will set its value to
+\luavar{true}, and that the boolean values are converted to real booleans while
+other values are still strings that have to be handled appropriately by the
+function itself. Which usually \emph{is} what is desired because in the end
+these variables will typically be written back to \LaTeX\ anyway, e.g. as
+arguments to other macros.%
+\footnote{\NOTE{TODO:} Look for functionality to convert other datatypes, if
+that should be what is necessary, e.g. for calculations. Probably that's
+implemented in lyluatex-lib already.}
+
+\paragraph{Manual Option Processing}
+
+While the original preprocessing of the \luavar{options} variable is done
+transparently by the \luavar{Formatter} object before its formatter function is
+called manual post-processing is necessary when options are not atomic but
+comma-separated option lists themselves.  For this purpose two of the built-in
+support functions (\vref{sec:defining:support-functions}) can be used:
+\luavar{self:split\_list()} and \luavar{self:check\_options()}.
+
+Enclosed in curly brackets, option values may themselves be comma-separated
+lists of \texttt{key=value} options. These will initially be parsed to strings
+in the \luavar{options} table, and in order to access them as sub-options this
+field can be processed by one of the two functions separately.
+
+\begin{minted}{tex}
+\foo[edition=2,instruments={violin,piano}]
+\end{minted}
+
+\noindent will be converted to
+
+\begin{minted}{lua}
+options = {
+	edition = '2',
+	instruments = 'violin,piano'
+}
+\end{minted}
+
+\noindent If it can be guaranteed that the options consists of a flat list of
+keys like in this example it can be converted to an array:
+
+\begin{minted}{lua}
+inst_options = self:split_list(options.instruments, ',')
+
+=> inst_options = { 'violin', 'piano' }
+\end{minted}
+
+\noindent However, option values may not always be arrays but can also be
+\texttt{key=value} tables themselves:
+
+\begin{minted}{tex}
+\book[author=Franz Kafka,
+publication={edition=2,year=1935,ed=Max Brod}]{Der Process}
+\end{minted}
+
+\noindent will initially result in the table
+
+\begin{minted}{lua}
+options = {
+	author = 'Franz Kafka',
+	publication = 'edition=2,year=1935,ed=Max Brod'
+}
+\end{minted}
+
+\noindent which can be processed to a separate table with the following command:
+
+\begin{minted}{lua}
+pub_options = self:check_options(options.publication, true)
+
+=> pub_options = {
+	edition = '2',
+	year = '1935',
+	ed = 'Max Brod'
+}
+\end{minted}
+
+\noindent Note the second argument \luavar{true} which is typically necessary to
+skip the validation described in the next section.
+
+
+\subsubsection{Validating Optional Arguments}
+\label{sec:defining:validating-optional-arguments}
 
 The \package{lyluatextools} package this option handling is built upon also
 provides functionality to \emph{validate} options and optional arguments, both
 with regard to “known options” and to expected option types or values.
-\luatemplates\ can make use of that functionality too, but this requires setting
-up a dedicated options object for the document or package, which is described in
-\vref{sec:validating-optional-arguments}.
+\package{luatemplates} can make this validation available to formatter
+functions, simply by adding a \term{Option Declaration} to the formatter's
+\term{Formatter Entry Table} (since functions will often be defined “standalone“ this will typically take place in a separate configuration step.)
+
+\begin{minted}{lua}
+MANUAL:add_configuration{
+	'reverse' = {
+		options = {
+			['upper'] = { 'false', 'true', '' },
+		}
+	}
+}
+\end{minted}
+
+\noindent This “declares” one single boolean option for the \luavar{reverse}
+formatter with default value \luavar{false}.  This has three consequences: the
+optional argument can have \emph{no other} option than \luavar{upper}, its value
+is restricted to one out of \luavar{false}, \luavar{true}, and empty (only the
+key, without an \luavar{=}). Finally, even if missing in the macro invocation,
+the resulting \luavar{options} table will always have the \luavar{upper} field,
+preset to the default, \texttt{false}.
+
+\medskip
+
+\NOTE{TO BE DONE:} The option declaration has to be fully documented, but
+presumably not here but in \package{lyluatextools}, once it has been finally
+decided what will happen with that package.
 
 
 \subsubsection{Built-in Formatters}
@@ -2301,9 +2428,6 @@ private to the client).
 \subsection{The \luavar{Formatter} Class}
 \label{sec:the-formatter-class}
 
-
-\subsection{Validating Optional Arguments}
-\label{sec:validating-optional-arguments}
 
 \subsection{Modular Design Principles}
 \label{sec:modular-design-principles}
