@@ -314,7 +314,7 @@ but package option 'self-documentation' seems not to be active
         -- Populate docstring with argument names or values
         local docargs = {}
         local value = ''
-        if options.args then
+        if options.args ~= 'default' then
             --[[
                 If an args option is given (as a comma-separated list,
                 NOTE: spaces around the commas are preserved.)

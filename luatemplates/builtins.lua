@@ -33,7 +33,7 @@ local err, warn, info, log = luatexbase.provides_module({
 --]]
 local Formatters = {}
 
-local BUILTINS = {
+local BUILTINS = lua_templates:new{
     name = 'builtins',
     formatters = Formatters,
     docstrings = {}
@@ -85,8 +85,13 @@ Docstring requested, but no formatter found at key
     end
     local docstring = formatter:docstring(options)
     local result = string.format([[\mintinline{tex}{%s}]], docstring)
-    if options.demo then result = result..string.format([[
-%s%s]], options.demosep or template_opts['demosep-inline'], docstring)
+    if options.demo then
+        local separator = options.demosep
+        if separator == 'default' then
+            separator = template_opts['demosep-inline']
+        end
+        result = result..string.format([[
+%s%s]], separator , docstring)
     end
     return result
 end
@@ -112,10 +117,14 @@ function Formatters:docstring_minted(key, options)
 \end{minted}
 ]], docstring)
     if options.demo then
+        local separator = options.demosep
+        if options.demosep == 'default' then
+            separator = template_opts['demosep-minted']
+        end
         result = result..string.format([[
 %s
 %s
-]], options.demosep or template_opts['demosep-minted'], docstring)
+]], separator, docstring)
     end
     return result
 end
@@ -419,18 +428,33 @@ if template_opts['self-documentation'] then
 --[[
     Configure the docstring formatters to create macros.
 --]]
-    Formatters.docstring_inline.name = 'luaMacroDocInline'
-    Formatters.docstring_inline.comment = 'Write a documentation string'
-    Formatters.docstring_inline.color = 'nocolor'
-
-    Formatters.docstring_minted.name = 'luaMacroDoc'
-    Formatters.docstring_minted.comment =
-        'Write a single documentation string in a minted environment'
-    Formatters.docstring_minted.color = 'nocolor'
-
-    Formatters.docstrings_minted.name = 'luaMacroDocClient'
-    Formatters.docstrings_minted.comment = 'Write doc strings for a whole client'
-    Formatters.docstrings_minted.color = 'nocolor'
+    local opts = {
+        ['args'] = { 'default', lua_templates.is_str },
+        ['demo'] = { 'false', 'true', '' },
+        ['demosep'] = { 'default', lua_templates.is_str },
+        ['nocomment'] = { 'false', 'true', ''}
+    }
+    BUILTINS:add_configuration{
+        docstring_inline = {
+            name = 'luaMacroDocInline',
+            comment = 'Write a documentation string',
+            color = 'nocolor',
+            options = opts,
+        },
+        docstring_minted = {
+            name = 'luaMacroDoc',
+            comment =
+                'Write a single documentation string in a minted environment',
+            color = 'nocolor',
+            options = opts,
+        },
+        docstrings_minted = {
+            name = 'luaMacroDocClient',
+            comment = 'Write doc strings for a whole client',
+            color = 'nocolor',
+            options = opts,
+        }
+    }
 end
 
-return lua_templates:new(BUILTINS)
+return BUILTINS
