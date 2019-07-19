@@ -28,6 +28,7 @@
 \RequirePackage{graphicx}
 \RequirePackage{mdwlist}
 \RequirePackage{pdfpages}
+\RequirePackage{dirtree}
 \usepackage{varioref}
 \usepackage[colorlinks]{hyperref}
 \usepackage{cleveref}
@@ -167,7 +168,7 @@ The main task, i.e. the creative and development work for working with
 \term{Templates Table} throughout this document) holding all the declarations
 and implementations for a given package.  The specifics of that table are
 documented towards the end of the manual in
-\vref{sec:table-structure-object-relations} -- but luckily it is rarely
+\vref{sec:advanced:tables-and-objects} -- but luckily it is rarely
 necessary to actually get in touch with the raw structure of that table.
 \luatemplates\ provides convenient tools to maintain a \term{Templates
 Table}, which are covered by the main parts of the manual. Typically the table
@@ -299,7 +300,7 @@ to make maintaining a \term{Templates Table} as clean and painless as possible.
 
 Information about working with a \term{Templates Table} is given in
 \vref{sec:usage} (and its subsections) while
-\vref{sec:table-structure-object-relations} provides in-depth documentation of
+\vref{sec:advanced:tables-and-objects} provides in-depth documentation of
 the structural foundations.
 
 
@@ -710,7 +711,7 @@ If not stated otherwise everything in the following sections refers to the work
 in the Lua file whose name is passed to \mintinline{tex}{\addLuaTemplates{}}.
 
 \subsection{The Templates Table}
-\label{sec:usage-templates-table}
+\label{sec:usage:templates-table}
 
 In order to be registered as a \term{Client} a table must be an instance of the
 \luavar{TemplatesTable} class and eventually returned as a module.  Such an object is instantiated by calling the factory
@@ -889,7 +890,7 @@ through \emph{writing} the \LaTeX\ invocation back).
 \label{sec:usage-adding-formatters}
 
 Formatters are \emph{declared} (or \emph{added}) by storing a \term{Formatter
-Entry} (\vref{sec:usage-formatter-entries}) somewhere in the hierarchy of the
+Entry} (\vref{sec:usage:formatter-entries}) somewhere in the hierarchy of the
 \term{Templates Table}'s \luavar{formatter} subtable.
 
 \begin{minted}{lua}
@@ -917,7 +918,7 @@ node of the given key does not exist yet it is either silently created (along
 with any intermediate nodes that are also missing), or an error is triggered and
 the compilation aborted, depending on the \luavar{strict} option described in
 the previous section. The formatter can be given as a \term{Formatter Entry} in
-any of the forms described in \vref{sec:usage-formatter-entries}:
+any of the forms described in \vref{sec:usage:formatter-entries}:
 
 \begin{minted}{lua}
 MANUAL:add_formatter('music.composer.century', [[(Ct: <<<century>>>)]])
@@ -990,7 +991,7 @@ the namespace is identical to regular formatters.
 
 
 \subsubsection{Formatter Entries}
-\label{sec:usage-formatter-entries}
+\label{sec:usage:formatter-entries}
 
 Each leaf in the \luavar{formatters} subtable of the \term{Templates Table}
 holds the declaration of one \term{Formatter}, a \term{Formatter Entry}.  This
@@ -2349,7 +2350,7 @@ Write some text to \LaTeX.
 
 This is a convenience function to write a string to \LaTeX, without worrying
 whether it is a long or other multiline string.  This is used from
-\luavar{Templates:_write} and should generally not be used by package code.
+\luavar{Templates:\_write} and should generally not be used by package code.
 
 
 \section{Advanced Formatter Programming}
@@ -2426,80 +2427,148 @@ possible with regular macro expansion either.
 
 
 \subsection{Table Structure and Object Relations}
-\label{sec:table-structure-object-relations}
+\label{sec:advanced:tables-and-objects}
+
+In general it is not necessary to know the implementation details of
+\package{luatemplates} to be able to use it, and even for more advanced
+techniques the tools described so far should be sufficient to work with the
+package.  However, since some of the more fancy functionality is achieved
+through non-obvious metatable machinery it seems necessary to provide explicit
+documentation of the tables and objects involved, both for future maintenance of
+the package and possibly for advanced formatter programming.
+
+The goal of this section is not a thorough discussion of the actual
+\emph{implementation} -- the source code is commented pretty thoroughly -- but
+rather to give a high-level idea how the pieces fit together, and what material
+is available for use in formatter programming.
+
+This is the overall table structure:
+
+\medskip
+
+\dirtree{%
+.1 'lua\_templates' (Templates object).
+.2 \_clients (table of TemplatesTable objects).
+.3 'builtins' (TemplatesTable object).
+.3 {...} (other clients).
+.2 \_formatters (table of tables).
+.3 'builtins' (table).
+.4 bold (Formatter object).
+.4 superscript (Formatter object).
+.4 {...} (further formatters).
+.3 {...} (other clients).
+}
+
+\bigskip
+
+\dirtree{%
+.1 client (TemplatesTables object).
+.2 {...} (properties).
+.2 formatters (table).
+.2 configuration (table).
+.2 \_local (table).
+.2 \_local\_formatters (table).
+}
+
+\bigskip
+
+\dirtree{%
+.1 Formatter.
+}
+
+
+\subsubsection{The \luavar{lua\_templates} Object}
+\label{sec:advanced:the-lua-templates-object}
+
+Upon loading of the \package{luatemplates} package one \luavar{Templates} table
+is created and made available as the global variable \luavar{lua\_templates}.
+This will become the \term{Templates Library} holding all registered
+\term[Client]{Clients} and being called from the generated macros.  It also
+provides the library handling functionality documented elsewhere:
 
 \begin{itemize*}
-\item What is the overall table structure of \luatemplates
-\item What happens during the registration of a formatter
-\item How do metatables affect what fields can be seen
+\item \luavar{Templates:new} -- create a new \luavar{TemplatesTable} (client) instance
+\item \luavar{Templates:add} -- register a new client to the library
+\item \luavar{Templates:format} -- apply a registered formatter
+\item \luavar{Templates:formatter} -- locate a registered formatter (from any client)
+\item \luavar{Templates:write} -- apply a formatter and write the result to \LaTeX
 \end{itemize*}
 
+\noindent In addition to these the support functions that are described in
+\vref{sec:defining:support-functions} and defined in the submodule
+\luavar{submodules/luatemplates-support.lua} are referenced to become fields of
+the \luavar{Templates} table.
 
-.  In particular
-it has to be noted that when there are too functions \luavar{foo()} and
-\luavar{bar()} defined in the same \luavar{formatters} table \luavar{foo()} can
-\emph{not} call \luavar{bar} through \luavar{self:bar()}.  Instead
-\luavar{self.bar} (note the dot instead of the colon) will point to the
-\luavar{Formatter} object containing the \luavar{bar()} function, and calling
-the \luavar{apply()} method of that object will have the desired result:
-\mintinline{lua}{self.bar:apply(<args>)}.  This is made possible through some
-metatable juggling (see in the chapter referenced above).
-
-
-
-The generated \LaTeX\ macros will call the global
-\luavar{Template} object's method \luavar{write()}, passing it the formatter's
-\luavar{key} and the macro arguments.  \luavar{write()} will then take the
-string returned from the formatter and write it back to \LaTeX, optionally
-coloring it.
-
-
-
-
-fields of the
-\luavar{MANUAL} table, siblings in \luavar{MANUAL.formatters}, and
-all fields of the global \luatemplates\ variable.
-
-Access to sibling formatters is demonstrated in the following \luavar{Bar()} formatter:
+\luavar{lua\_templates} holds two corresponding \emph{stacks} --
+\luavar{\_clients} and \luavar{\_formatters} -- that are handled in LIFO order:
+when looking up a formatter the clients are searched in reverse order of
+addition.  Whenever a client is added through \luavar{lua\_templates:add()}
+entries are added to both stacks.
+The \luavar{\_clients} subtable holds objects of the \luavar{TemplatesTable}
+class (\vref{sec:advanced:templates-table}) that have been created in
+packages/documents and are added as \term[Client]{Clients} to the
+\term{Templates Library}.  The entry in the \luavar{\_formatters} subtable is
+populated automatically upon the addition of a client, and it will hold a flat
+list whose keys are virtual paths (strings in Lua-style dot-notation) to which
+\luavar{Formatter} objects (\vref{sec:advanced:the-formatter-class}) are
+assigned.  These \luavar{Formatter} objects too are created implicitly while the
+client is being added to the library.  A hyphothetical \luavar{\_formatters} table might look like this:
 
 \begin{minted}{lua}
-function MANUAL.formatters:Bar(text)
-	 local result = ''
-	 for i=1, #text, 1 do
-			 result = result .. self.foo:apply(text:sub(i, i))
-	 end
-	 return result
-end
+lua_templates = {
+	_clients = {
+		['my-package'] = {
+			['foo'] = <Formatter object for \foo>,
+			['bar.baz'] = <Formatter object for \barBaz>
+		}
+	}
+}
 \end{minted}
 
-\noindent This function iterates over the characters in the \luavar{text}
-argument and replaces each with the result of calling \luavar{foo()} on it.  The
-automatically generated macro could be used like \luaMacroDocInline[demo,args=Foo]{Bar}.
-
-\mintinline{tex}{\bar{abc}},
-which would print \textcolor{blue}{|a||b||c|}.
-
-\paragraph{\luavar{configuration}}
-
-An optional subtable \luavar{configuration} may be used to either provide
-additional configuration data to formatters (\vref{sec:usage:configuring-formatters}) or
-to create \LaTeX\ macros from built-in formatters
-(\vref{sec:exposing-builtin-formatters}).
+\noindent In this reference list formatters are stored by their (potentially
+nested) \emph{keys} referring to their position in the original
+\luavar{TemplatesTable} instance.  Additionally each formatter stores its macro
+name, which often differs from the key, and upon formatter lookup both the key
+and the internal name are considered.
 
 
-\subsubsection{The Formatter Table}
+
+\subsubsection{\luavar{TemplatesTable} -- The Client}
+\label{sec:advanced:templates-table}
+
+The \luavar{TemplatesTable} class is the basic entity a package author is
+confronted with: one \term{Client} is defined within one \term{Templates Table},
+instantiated with \mintinline{lua}{lua_templates:new(<name>)} (or a table as
+argument).  It can be given a few properties (see
+\vref{sec:usage:templates-table}), and the \luavar{formatters} (mandatory) and
+\luavar{configuration} (optional) subtables have to be populated with formatter
+declarations.
+
+
+\subsubsection{The \luavar{formatters} Table}
 \label{sec:advanced:the-formatter-table}
 
-The mandatory field in a templates table is the \luavar{formatters} subtable. It
-may be arbitrarily nested with further subtables that serve both for organizing
-the material and for defining the namespace of generated macro names, which are
-by default derived from the table structure.  Each field (with the exception of
-subtable nodes) is expected to be a valid \emph{formatter entry} (see next
-section) declaring and/or implementing a \emph{formatter}.  All formatters
-declared in the \luavar{formatters} subtable are also available to the other
-clients of the templating system (while other toplevel fields can be considered
-private to the client).
+The mandatory field in a templates table is the \luavar{formatters} subtable,
+which is populated using the commands described in
+\vref{sec:usage:declaring-formatters}. It may be arbitrarily nested with further
+subtables that serve both for organizing the material and for defining the
+namespace of generated macro names, which are by default derived from the table
+structure.  Each field (with the exception of subtable nodes) is expected to be
+a valid \emph{formatter entry} (see \vref{sec:usage:formatter-entries}),
+declaring and/or implementing a single \emph{formatter} (which will later be
+converted to a proper \luavar{Formatter} object).
 
+
+\subsubsection{The \luavar{configuration} Table}
+\label{sec:advanced:the-configuration-table}
+
+An optional subtable \luavar{configuration} may be used to either provide
+additional configuration data to formatters
+(\vref{sec:usage:configuring-formatters}) or to create \LaTeX\ macros from
+built-in (\vref{sec:usage:publishing-builtin-formatters}) or other hidden
+formatters.  The table is a flat table whose keys are formatter keys in
+dot-notation strings, and it is populated using the methods described in
+\vref{sec:usage:configuring-formatters}.
 
 
 
@@ -2537,6 +2606,25 @@ Use \cmd{DV} example from \vref{sec:defining:styles}
 \item Built-in Formatters
 \end{itemize*}
 
+
+Access to sibling formatters is demonstrated in the following \luavar{Bar()} formatter:
+
+\begin{minted}{lua}
+function MANUAL.formatters:Bar(text)
+	 local result = ''
+	 for i=1, #text, 1 do
+			 result = result .. self.foo:apply(text:sub(i, i))
+	 end
+	 return result
+end
+\end{minted}
+
+\noindent This function iterates over the characters in the \luavar{text}
+argument and replaces each with the result of calling \luavar{foo()} on it.  The
+automatically generated macro could be used like \luaMacroDocInline[demo,args=Foo]{Bar}.
+
+\mintinline{tex}{\bar{abc}},
+which would print \textcolor{blue}{|a||b||c|}.
 
 
 
