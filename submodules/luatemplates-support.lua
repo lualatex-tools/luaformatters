@@ -121,4 +121,12 @@ function SUPPORT:wrap_optional_arg(opt)
     end
 end
 
+function SUPPORT:write_latex(latex)
+--[[
+    Convenience function because it's sometimes awkward to write
+    long strings, having to use an intermediate variable.
+--]]
+    tex.print(latex:explode('\n'))
+end
+
 return SUPPORT

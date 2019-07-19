@@ -2343,6 +2343,13 @@ self:wrap_optional_arg('')
 \end{minted}
 
 
+\paragraph{\luavar{write\_latex} (text)}
+
+Write some text to \LaTeX.
+
+This is a convenience function to write a string to \LaTeX, without worrying
+whether it is a long or other multiline string.  This is used from
+\luavar{Templates:_write} and should generally not be used by package code.
 
 
 \section{Advanced Formatter Programming}

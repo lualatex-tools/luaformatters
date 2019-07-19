@@ -245,14 +245,6 @@ function Templates:_write(content, color)
     self:write_latex(content)
 end
 
-function Templates:write_latex(latex)
---[[
-    Convenience function because it's sometimes awkward to write
-    long strings, having to use an intermediate variable.
---]]
-    tex.print(latex:explode('\n'))
-end
-
 function Templates:write(key_color, ...)
 --[[
     Process some data using a formatter and write it to the TeX document.
