@@ -57,7 +57,7 @@ function Formatter:new(parent, key, formatter)
     -- lua_templates “client”
     o._parent = parent
     -- initialize macro name, may be overridden if 'name' property is given
-    o._name = Formatter.make_name(o, key)
+    o._name = Formatter._make_name(o, key)
     -- assign options declaration if given
     if formatter.options then
         o._options = lyluatex_options.Opts:new(nil, formatter.options)
@@ -66,70 +66,47 @@ function Formatter:new(parent, key, formatter)
     -- copy all properties that are given explicitly
     Formatter.update(o, formatter)
 
+    -- Initial validation
+    o._check_args(o)
+
+
     return o
 end
 
-function Formatter:check_args()
+function Formatter:apply(...)
 --[[
-    Create or validate arguments,
-    depending on whether the formatter is a function or a template.
+    Apply the formatter (called from the LaTeX macro).
+    If the formatter is a template call _apply_template().
+    If it is a function check if it contains an optional argument,
+    process it with self:check_options and call the internal formatter.
+    This means that within a formatter the `options` argument is already
+    parsed and (optionally) validated.
 --]]
-    if type(self._f) == 'function' then
-        self:set_args_from_function()
-    elseif self._args then
-        self:check_explicit_template_args()
+    if type(self._f) == 'string' then
+        return self:_apply_template(...)
     else
-        self:set_args_from_template()
+        local args = { ... }
+        local opt_index = self:has_options()
+        if opt_index then
+            local options = table.remove(args, opt_index)
+            options = self:check_options(options)
+            table.insert(args, opt_index, options)
+        end
+        return self:_f(unpack(args))
     end
-    if self:has_options() and not self._opt then self._opt = '' end
 end
 
-function Formatter:check_explicit_template_args()
---[[
-    Perform validity checks for explicitly given args against
-    the formatter template.
-    - If a field in the template has no corresponding argument,
-      issue a warning (while this is most probably erroneous it
-      doesn't warrant aborting the compilation)
-    - If an argument doesn't have a corresponding field, produce an error.
-
-    TODO: Make sure this code can't be considerably condensed ...
-    https://github.com/uliska/luatemplates/issues/31
---]]
-    local fields = self:template_fields()
-    local _fields, _args = {}, {}
-    -- Create lookup table with template field names
-    for _, v in ipairs(fields) do
-        _fields[v] = true
-    end
-    -- Check if all given args have a matching field.
-    for _, v in ipairs(self._args) do
-        if not _fields[v] then
-            err(string.format([[
-Error configuring template.
-Argument '%s' does not match any field.
-Available Fields:
-- %s
-]], v, table.concat(fields, '\n- ')))
-        end
-        -- Populate lookup table
-        _args[v] = true
-    end
-    -- Check if all template fields have a matching arg. Handle `options` field.
-    for _, v in ipairs(fields) do
-        if v == 'options' then
-            _args.options = true
-            table.insert(self._args, 1, 'options')
-        elseif not _args[v] then
-            warn(string.format([[
-Problem configuring template.
-Field '%s' has no matching argument
-and will not be replaced.
-Present arguments:
-- %s
-]], v, table.concat(self._args, '\n- ')))
+function Formatter:args()
+    if not self._macro_args then
+        if self:is_func() then
+            self:_set_args_from_function()
+        elseif self._args then
+            self:_check_explicit_template_args()
+        else
+            self:_set_args_from_template()
         end
     end
+    return self._macro_args
 end
 
 function Formatter:check_options(options, ignore_declarations)
@@ -219,11 +196,9 @@ function Formatter:_create_macro()
     template-based formatter.
     (only creates the macro, doesn't return it)
 --]]
-    -- Initial validation
-    self:check_args()
 
     -- string representation of macro acguments
-    local args = self:format_args()
+    local args = self:_format_args()
     if args ~= '' then args = ', ' .. args end
 
     -- Set up templates, nested for better readability
@@ -235,7 +210,7 @@ lua_templates:write({ '<<<formatter>>>', '<<<color>>>' }<<<args>>>)]]
     -- Populate templates with actual data
     wrapper_template = wrapper_template:gsub(
     '<<<name>>>', self:name()):gsub(
-    '<<<argnums>>>', self:format_arg_nums())
+    '<<<argnums>>>', self:_format_arg_nums())
 
     lua_template = lua_template:gsub(
         '<<<formatter>>>', self._key):gsub(
@@ -339,6 +314,35 @@ but package option 'self-documentation' seems not to be active
     return result
 end
 
+function Formatter:fields()
+--[[
+    Return an array table with all template fields in the given template.
+    Order of appearance is preserved, duplicates are suppressed.
+    If an 'options' field is present, it is stored in the first position.
+--]]
+    if not self._fields then
+        self._fields = {}
+        if not self:is_func() then
+            self._fields = {}
+            local _result = {}
+            local i = 0
+            local template = self._f
+            if template:find('options') then
+                self._opt_index = 1
+                table.insert(self._fields, 'options')
+                _result.options = true
+            end
+            for element in template:gmatch('<<<(%w+)>>>') do
+                if not _result[element] then
+                    _result[element] = true
+                    table.insert(self._fields, element)
+                end
+            end
+        end
+    end
+    return self._fields
+end
+
 function Formatter:_format(key, ...)
 --[[
     Locate a formatter local to the parent and apply it
@@ -350,131 +354,6 @@ not found in client
 %s
         ]], self:parent():name(), key))
     return formatter:apply(...)
-end
-
-function Formatter:format_arg_nums()
---[[
-    Return a string used for specifying macro argument numbers
---]]
-    local args = self._args
-    -- format 'number of arguments'
-    local result, arg_cnt = '', 0
-    if args and #args > 0 then
-        result = '['.. #args .. ']'
-    else
-        return ''
-    end
-    -- format optional argument
-    if self._opt then result = result .. '[' .. self._opt .. ']' end
-    return result
-end
-
-function Formatter:format_args()
---[[
-    Return a string used as the argument specification in a created
-    macro. Arguments are the last elements in the \directlua call
-    to lua_templates:write().
---]]
-    local args = ''
-    -- Skip if there are no arguments
-    if self._args then
-        if self:is_func() then
-            args = self:macro_function_argstring()
-        else
-            args = self:macro_template_argstring()
-        end
-    end
-    return args
-end
-
-function Formatter:apply(...)
---[[
-    Apply the formatter (called from the LaTeX macro).
-    If the formatter is a template call apply_template().
-    If it is a function check if it contains an optional argument,
-    process it with self:check_options and call the internal formatter.
-    This means that within a formatter the `options` argument is already
-    parsed and (optionally) validated.
---]]
-    if type(self._f) == 'string' then
-        return self:apply_template(...)
-    else
-        local args = { ... }
-        local opt_index = self:has_options()
-        if opt_index then
-            local options = table.remove(args, opt_index)
-            options = self:check_options(options)
-            table.insert(args, opt_index, options)
-        end
-        return self:_f(unpack(args))
-    end
-end
-
-function Formatter:apply_template(...)
---[[
-    Use the template to format the given values.
-
-    The argument(s) may be one out of:
-    - a string
-      Find a single replacement field in the template
-      and replace it with the argument
-    - an association table
-      The table will be used to match fields with data
-      TODO: Consider validating this too (match fields, like it is
-      done during macro creation)
-    - an array plus additional arguments
-      The array contains field names, whose number must match
-      the number of remaining varargs.
---]]
-    -- first set up the replacement table
-    local args = { ... }
-    if #args == 0 then return self._f end
-    local data
-    local first = table.remove(args, 1)
-
-    if type(first) == 'string' then
-        local field = self:template_fields()
-        if #field == 0 then
-            warn([[
-Replace template containing no fields
-with a single string. Returning the template,
-ignoring the replacement value.
-Template:
-%s
-Replacement:
-%s
-]], self._f, first)
-            return template
-        elseif #field > 1 then
-            warn([[
-Replace template containing multiple fields
-with a single string. Using the first field,
-leaving the following field(s) unreplaced:
-Template:
-%s
-Replacement:
-%s
-]], self._f, first)
-        end
-        data = { [field[1]] = first }
-    elseif #first == 0 then
-        -- Obviously the (first) argument is a replacement table
-        data = first
-    else
-        -- first argument is expected to an array with field names
-        -- TODO: validate the argument number
-        data = {}
-        for i, v in ipairs(first) do
-            data[v] = args[i]
-        end
-    end
-
-    -- Perform the actual replace operation
-    local template = self._f
-    for k, v in pairs(data) do
-        template = template:gsub('<<<'..k..'>>>', v)
-    end
-    return template
 end
 
 function Formatter:has_options()
@@ -532,7 +411,204 @@ function Formatter:macro()
     return self._macro
 end
 
-function Formatter:macro_function_argstring()
+function Formatter:name()
+--[[
+    Return the formatter's name (caching not required)
+--]]
+    return self._name
+end
+
+function Formatter:parent()
+--[[
+    Return a formatter's parent object.
+    The “parent” is the templates table that has originally been passed
+    to Templates:new as 'client'.
+--]]
+    return self._parent
+end
+
+function Formatter:set_parent(parent)
+    self._parent = parent
+end
+
+function Formatter:update(properties)
+    -- assign all configuration parameters to the formatter entry
+    for k, v in pairs(properties) do
+        self['_'..k] = v
+    end
+end
+
+
+--[[
+    Private functions for internal use only
+--]]
+
+function Formatter:_apply_template(...)
+--[[
+    Use the template to format the given values.
+
+    The argument(s) may be one out of:
+    - a string
+      Find a single replacement field in the template
+      and replace it with the argument
+    - an association table
+      The table will be used to match fields with data
+      TODO: Consider validating this too (match fields, like it is
+      done during macro creation)
+    - an array plus additional arguments
+      The array contains field names, whose number must match
+      the number of remaining varargs.
+--]]
+    -- first set up the replacement table
+    local args = { ... }
+    if #args == 0 then return self._f end
+    local data
+    local first = table.remove(args, 1)
+
+    if type(first) == 'string' then
+        local field = self:fields()
+        if #field == 0 then
+            warn([[
+Replace template containing no fields
+with a single string. Returning the template,
+ignoring the replacement value.
+Template:
+%s
+Replacement:
+%s
+]], self._f, first)
+            return template
+        elseif #field > 1 then
+            warn([[
+Replace template containing multiple fields
+with a single string. Using the first field,
+leaving the following field(s) unreplaced:
+Template:
+%s
+Replacement:
+%s
+]], self._f, first)
+        end
+        data = { [field[1]] = first }
+    elseif #first == 0 then
+        -- Obviously the (first) argument is a replacement table
+        data = first
+    else
+        -- first argument is expected to an array with field names
+        -- TODO: validate the argument number
+        data = {}
+        for i, v in ipairs(first) do
+            data[v] = args[i]
+        end
+    end
+
+    -- Perform the actual replace operation
+    local template = self._f
+    for k, v in pairs(data) do
+        template = template:gsub('<<<'..k..'>>>', v)
+    end
+    return template
+end
+
+function Formatter:_check_args()
+--[[
+    Create or validate arguments,
+    depending on whether the formatter is a function or a template.
+--]]
+    if type(self._f) == 'function' then
+        self:_set_args_from_function()
+    elseif self._args then
+        self:_check_explicit_template_args()
+    else
+        self:_set_args_from_template()
+    end
+    if self:has_options() and not self._opt then self._opt = '' end
+end
+
+function Formatter:_check_explicit_template_args()
+--[[
+    Perform validity checks for explicitly given args against
+    the formatter template.
+    - If a field in the template has no corresponding argument,
+      issue a warning (while this is most probably erroneous it
+      doesn't warrant aborting the compilation)
+    - If an argument doesn't have a corresponding field, produce an error.
+
+    TODO: Make sure this code can't be considerably condensed ...
+    https://github.com/uliska/luatemplates/issues/31
+--]]
+    local fields = self:fields()
+    local _fields, _args = {}, {}
+    -- Create lookup table with template field names
+    for _, v in ipairs(fields) do
+        _fields[v] = true
+    end
+    -- Check if all given args have a matching field.
+    for _, v in ipairs(self._args) do
+        if not _fields[v] then
+            err(string.format([[
+Error configuring template.
+Argument '%s' does not match any field.
+Available Fields:
+- %s
+]], v, table.concat(fields, '\n- ')))
+        end
+        -- Populate lookup table
+        _args[v] = true
+    end
+    -- Check if all template fields have a matching arg. Handle `options` field.
+    for _, v in ipairs(fields) do
+        if v == 'options' then
+            _args.options = true
+            table.insert(self._args, 1, 'options')
+        elseif not _args[v] then
+            warn(string.format([[
+Problem configuring template.
+Field '%s' has no matching argument
+and will not be replaced.
+Present arguments:
+- %s
+]], v, table.concat(self._args, '\n- ')))
+        end
+    end
+end
+
+function Formatter:_format_arg_nums()
+--[[
+    Return a string used for specifying macro argument numbers
+--]]
+    local args = self._args
+    -- format 'number of arguments'
+    local result, arg_cnt = '', 0
+    if args and #args > 0 then
+        result = '['.. #args .. ']'
+    else
+        return ''
+    end
+    -- format optional argument
+    if self._opt then result = result .. '[' .. self._opt .. ']' end
+    return result
+end
+
+function Formatter:_format_args()
+--[[
+    Return a string used as the argument specification in a created
+    macro. Arguments are the last elements in the \directlua call
+    to lua_templates:write().
+--]]
+    local args = ''
+    -- Skip if there are no arguments
+    if self._args then
+        if self:is_func() then
+            args = self:_macro_function_argstring()
+        else
+            args = self:_macro_template_argstring()
+        end
+    end
+    return args
+end
+
+function Formatter:_macro_function_argstring()
 --[[
     Return the string representing the formatter arguments in the \directlua call.
     If the function has an `options` argument this has to be mapped to the
@@ -559,7 +635,7 @@ function Formatter:macro_function_argstring()
     return table.concat(args, ',')
 end
 
-function Formatter:macro_template_argstring()
+function Formatter:_macro_template_argstring()
 --[[
     Handle template args. This is simpler because argument order
     has been specified manually, and `options` argument has already
@@ -573,7 +649,7 @@ function Formatter:macro_template_argstring()
     return '{' .. table.concat(args, ',') .. '}'
 end
 
-function Formatter:make_name(key)
+function Formatter:_make_name(key)
 --[[
     Generate a macro name from the given key.
     Works by converting the dot-notation to mixed case.
@@ -604,13 +680,6 @@ function Formatter:make_name(key)
     return is_hidden .. result
 end
 
-function Formatter:name()
---[[
-    Return the formatter's name (caching not required)
---]]
-    return self._name
-end
-
 function Formatter:_numbered_argument(number)
 --[[
     Generate a numbered argument for use in a generated LaTeX command.
@@ -622,16 +691,7 @@ function Formatter:_numbered_argument(number)
     return string.format([["\luatexluaescapestring{\unexpanded{#%s}}"]], number)
 end
 
-function Formatter:parent()
---[[
-    Return a formatter's parent object.
-    The “parent” is the templates table that has originally been passed
-    to Templates:new as 'client'.
---]]
-    return self._parent
-end
-
-function Formatter:set_args_from_function()
+function Formatter:_set_args_from_function()
 --[[
     Retrieve the arguments from a formatter function (through introspection).
     If an `options` argument is present store its position for the mapping of
@@ -651,7 +711,7 @@ function Formatter:set_args_from_function()
     end
 end
 
-function Formatter:set_args_from_template()
+function Formatter:_set_args_from_template()
 --[[
     Try to extract the replacement fields from a template that has been declared
     without an explicit `args` field.
@@ -659,7 +719,7 @@ function Formatter:set_args_from_template()
     one `options` argument.
 --]]
     local max = 1
-    local fields = self:template_fields()
+    local fields = self:fields()
     for i, v in ipairs(fields) do
         if v == 'options' then
             max = max + 1
@@ -683,41 +743,5 @@ function Formatter:set_args_from_template()
     end
 end
 
-function Formatter:set_parent(parent)
-    self._parent = parent
-end
-
-function Formatter:template_fields()
---[[
-    Return an array table with all template fields in the given template.
-    Order of appearance is preserved, duplicates are suppressed.
-    If an 'options' field is present, it is stored in the first position.
---]]
-    if not self._fields then
-        self._fields = {}
-        local _result = {}
-        local i = 0
-        local template = self._f
-        if template:find('options') then
-            self._opt_index = 1
-            table.insert(self._fields, 'options')
-            _result.options = true
-        end
-        for element in template:gmatch('<<<(%w+)>>>') do
-            if not _result[element] then
-                _result[element] = true
-                table.insert(self._fields, element)
-            end
-        end
-    end
-    return self._fields
-end
-
-function Formatter:update(properties)
-    -- assign all configuration parameters to the formatter entry
-    for k, v in pairs(properties) do
-        self['_'..k] = v
-    end
-end
 
 return Formatter
