@@ -34,6 +34,7 @@ local Templates = {
     _client_order_rev = {},
 }
 Templates.__index = Templates
+-- Has to be made available as global function already now
 _G['lua_templates'] = Templates
 
 -- Load supporting modules
@@ -43,6 +44,12 @@ local TemplatesTable = require('luatemplates-templatestable')
 for k, v in pairs(require('luatemplates-support')) do
     Templates[k] = v
 end
+
+
+--[[
+    Public interface, to be used for library management, but also from
+    within formatter functions.
+--]]
 
 function Templates:new(properties)
     return TemplatesTable:new(properties)
@@ -66,68 +73,17 @@ function Templates:add(client)
     -- (so if they'd use them they'd get overridden)
 
     -- Register the formatters local to the client
-    self:register_local_formatters(client)
+    self:_register_local_formatters(client)
     -- Process the entries in client.formatter
-    self:register_formatters(client)
+    self:_register_formatters(client)
     -- Process additional configuration
-    self:configure_formatters(client)
+    self:_configure_formatters(client)
     -- Create LaTeX macros
-    self:create_macros(client)
+    self:_create_macros(client)
 
     return o
 end
 
-
-function Templates:configure_formatter(client, key, properties)
---[[
-    Apply manual configuration for a given item.
-    - locate the formatter by the `key` field
-      (will find the formatter in reverse order of addition)
-    - update all fields in the formatter with the given data.
-    - If `properties` is a string it is considered to be the
-      formatter's new name.
-    - If a name property is present (macro is renamed),
-      add a copy of the Formatter entry in the current client's
-      entries table to trigger the creation of a macro
---]]
-    if type(properties) == 'string' then
-        properties = { name = properties }
-    end
-
-    local formatter = self:formatter(key)
-    if not formatter then err(string.format([[
-Error configuring command entry.
-No formatter found at key: %s]], key))
-    end
-    formatter:update(properties)
-    if properties.name then
-        self._formatters[client:name()][key] = formatter
-    end
-end
-
-function Templates:configure_formatters(client)
---[[
-    Provide additional configuration to formatters or
-    publish hidden formatters as LaTeX macros.
---]]
-    if not client.configuration then return end
-    for macro_name, properties in pairs(client.configuration) do
-        self:configure_formatter(client, macro_name, properties)
-    end
-end
-
-function Templates:create_macros(client)
---[[
-    Create the LaTeX macros from the non-hidden formatters in a client.
---]]
-    local macro
-    for key, formatter in pairs(self._formatters[client:name()]) do
-        macro = formatter:macro()
-        if macro then
-            self:write_latex(macro)
-        end
-    end
-end
 
 function Templates:format(key, ...)
 --[[
@@ -180,7 +136,86 @@ function Templates:formatter(key)
     end
 end
 
-function Templates:_register_formatters(client, key, root, _local)
+function Templates:write(key_color, ...)
+--[[
+    Process some data using a formatter and write it to the TeX document.
+    - key_color (string or table)
+      Either a string key pointing to a formatter (template/function)
+      or a table with such a key and a color.
+      If a simple key is given color defaults to 'default' (using the package option).
+    - ...
+      All remaining arguments are passed on to the formatter.
+      NOTE: If the formatter is a template string, there must be exactly one
+      further argument with a table specifying the key/value replacements.
+--]]
+    local key, color
+    if type(key_color) == 'string' then
+        key = key_color
+        color = 'default'
+    else
+        key = key_color[1]
+        color = key_color[2]
+    end
+    self:_write(self:format(key, ...), color)
+end
+
+
+--[[
+    Internal functions not intended for use by client code.
+--]]
+
+function Templates:_configure_formatter(client, key, properties)
+--[[
+    Apply manual configuration for a given item.
+    - locate the formatter by the `key` field
+      (will find the formatter in reverse order of addition)
+    - update all fields in the formatter with the given data.
+    - If `properties` is a string it is considered to be the
+      formatter's new name.
+    - If a name property is present (macro is renamed),
+      add a copy of the Formatter entry in the current client's
+      entries table to trigger the creation of a macro
+--]]
+    if type(properties) == 'string' then
+        properties = { name = properties }
+    end
+
+    local formatter = self:formatter(key)
+    if not formatter then err(string.format([[
+Error configuring command entry.
+No formatter found at key: %s]], key))
+    end
+    formatter:update(properties)
+    if properties.name then
+        self._formatters[client:name()][key] = formatter
+    end
+end
+
+function Templates:_configure_formatters(client)
+--[[
+    Provide additional configuration to formatters or
+    publish hidden formatters as LaTeX macros.
+--]]
+    if not client.configuration then return end
+    for macro_name, properties in pairs(client.configuration) do
+        self:_configure_formatter(client, macro_name, properties)
+    end
+end
+
+function Templates:_create_macros(client)
+--[[
+    Create the LaTeX macros from the non-hidden formatters in a client.
+--]]
+    local macro
+    for key, formatter in pairs(self._formatters[client:name()]) do
+        macro = formatter:macro()
+        if macro then
+            self:write_latex(macro)
+        end
+    end
+end
+
+function Templates:_do_register_formatters(client, key, root, _local)
     --[[
         Recursively walk the client's `formatters` tree
         and register all the formatters in a flat table at
@@ -205,12 +240,12 @@ function Templates:_register_formatters(client, key, root, _local)
             end
             root[k] = formatter
         else
-            self:_register_formatters(client, next, v, _local)
+            self:_do_register_formatters(client, next, v, _local)
         end
     end
 end
 
-function Templates:register_formatters(client)
+function Templates:_register_formatters(client)
 --[[
     Recursively visit all formatter entries in client,
     create Formatter objects from them and register them in
@@ -219,15 +254,15 @@ function Templates:register_formatters(client)
     if not self._formatters[client:name()] then
         self._formatters[client:name()] = {}
     end
-    self:_register_formatters(client, '', client.formatters)
+    self:_do_register_formatters(client, '', client.formatters)
 end
 
-function Templates:register_local_formatters(client)
+function Templates:_register_local_formatters(client)
 --[[
     Recursively visit all local formatter entries in client,
     create Formatter objects from them and register as local formatters.
 --]]
-    self:_register_formatters(client, '', client._local, true)
+    self:_do_register_formatters(client, '', client._local, true)
 end
 
 function Templates:_write(content, color)
@@ -245,28 +280,6 @@ function Templates:_write(content, color)
     self:write_latex(content)
 end
 
-function Templates:write(key_color, ...)
---[[
-    Process some data using a formatter and write it to the TeX document.
-    - key_color (string or table)
-      Either a string key pointing to a formatter (template/function)
-      or a table with such a key and a color.
-      If a simple key is given color defaults to 'default' (using the package option).
-    - ...
-      All remaining arguments are passed on to the formatter.
-      NOTE: If the formatter is a template string, there must be exactly one
-      further argument with a table specifying the key/value replacements.
---]]
-    local key, color
-    if type(key_color) == 'string' then
-        key = key_color
-        color = 'default'
-    else
-        key = key_color[1]
-        color = key_color[2]
-    end
-    self:_write(self:format(key, ...), color)
-end
 
 
 --[[]
