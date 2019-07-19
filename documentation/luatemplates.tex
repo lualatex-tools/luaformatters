@@ -2357,7 +2357,66 @@ The remainder of this manual consists (at this point) of bullet lists and raw ma
 \subsection{The \LaTeX\ Macro Lifecycle}
 \label{sec:latex-macro-lifecycle}
 
-How is a macro generated and what does it actually do when called.
+Maybe the core functionality of the \package{luatemplates} package is the
+automatic creation of \LaTeX\ macros from defined \term[Formatter]{Formatters}.
+And while this should generally be quite intuitive there may at some point arise
+the desire or the need to know in more detail what happens to the formatters,
+and when which information is present and what action is taken.
+
+In the \term{Templates Table} the package author defines, declares and
+configures \term[Formatter]{Formatters}, but at that point \LaTeX\ macros are
+not yet created. Instead \term[Formatter Entry]{Formatter Entries} are prepared
+in the \luavar{TemplatesTable}'s subtable \luavar{formatters}.  These are
+processed when the \term{Templates Table} is added to the library using
+\cmd{addLuaTemplates} from \LaTeX\ or \mintinline{lua}{lua_templates:add()} from
+within a Lua file.  At that point the formatter \emph{entries} are converted to
+actual \luavar{Formatter} \emph{objects} (see
+\vref{sec:advanced:the-formatter-class}), and \LaTeX\ macros are created.
+
+The form of the macros may be surprising since it does not at all resemble the
+macros shown throughout this manual (e.g. \luaMacroDocInline{image}).  The
+\LaTeX\ macro does not perform any of the work it is supposed to do by itself,
+instead it invokes the function \mintinline{lua}{lua_templates:write({
+<formatter>, <color> }, <arguments>)}, which will \emph{then} perform the actual
+work.  It will locate the correct \term{Formatter}, call its \luavar{apply()}
+method with the correctly mapped arguments, take the result string and
+optionally wrap it in a \cmd{textcolor} macro.  The \emph{actual} macro for the \cmd{image} command looks like this (reformatted for better readability):
+
+\begin{minted}{tex}
+\newcommand{\image}[2][width=2cm]{%
+  \directlua{
+    lua_templates:write(
+      { 'image', 'nocolor' },
+      {
+        options = "\luatexluaescapestring{\unexpanded{#1}}",
+        image = "\luatexluaescapestring{\unexpanded{#2}}"
+      }
+    )
+  }
+}
+\end{minted}
+
+\noindent This has a few implications:
+
+\begin{itemize*}
+\item The Lua code defined in formatter functions will be executed when the
+macro is \emph{invoked}, not at some earlier point, e.g. when it is
+\emph{created}.  This means that the formatter has access to the environment at
+the time of invocation, which corresponds to regular macro expansion.
+\item The resulting string may include macro calls, both standard ones like
+\cmd{emph} \emph{and} macros defined through \package{luatemplates}.  These are
+written back to the \LaTeX\ document where they will be parsed \emph{next},
+possibly invoking the next \package{luatemplates} formatter.
+\item This may or may not influence the behaviour with regard to “fragile“
+commands.  Generally, if the formatter is able to “serialize” the data to
+regular \LaTeX\ code it may be more robust than regular coding, but of course
+when it comes to issues like inserting footnotes in floating environments there
+is nothing to be gained from this approach.
+\item A \package{luatemplates} macro must not include itself in the code
+written back to \LaTeX\ in order to avoid loops, but of course this is not
+possible with regular macro expansion either.
+\end{itemize*}
+
 
 \subsection{Table Structure and Object Relations}
 \label{sec:table-structure-object-relations}
@@ -2438,7 +2497,7 @@ private to the client).
 
 
 \subsection{The \luavar{Formatter} Class}
-\label{sec:the-formatter-class}
+\label{sec:advanced:the-formatter-class}
 
 
 \subsection{Modular Design Principles}
