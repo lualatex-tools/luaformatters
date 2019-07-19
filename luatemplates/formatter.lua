@@ -180,13 +180,15 @@ function Formatter:check_options(options, ignore_declarations)
             end
             result[k] = v
         end
-    end
-    -- handle boolean values, converting from strings to booleans
-    -- (NOTE: empty string represents `true`)
-    -- TODO: This should be handled/fixed in lyluatex-options?
-    for k, v in pairs(result) do
-        if v == '' or v == 'true' then result[k] = true
-        elseif v == 'false' then result[k] = false end
+        -- handle boolean values, converting from strings to booleans
+        -- (NOTE: empty string represents `true`)
+        -- TODO: This should be handled/fixed in lyluatex-options?
+        for k, v in pairs(result) do
+            if v == '' or v == 'true' then result[k] = true
+            elseif v == 'false' then result[k] = false end
+        end
+        -- store the original string in case someone needs it
+        result._original = options
     end
     return result
 end
