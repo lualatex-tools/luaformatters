@@ -9,12 +9,7 @@ local err, warn, info, log = luatexbase.provides_module({
 })
 
 local TemplatesTable = {}
-TemplatesTable.__index = function(t, key)
-    return
-    t.formatters[key]
-    or TemplatesTable[key]
-    or lua_templates[key]
-end
+TemplatesTable.__index = TemplatesTable
 
 function TemplatesTable:new(properties)
 --[[

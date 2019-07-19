@@ -31,16 +31,11 @@ local Formatter = {}
     - the Formatter prototype (the code in this file)
     - the “parent”, which is a lua_templates “client”
     - lua_templates (the Templates table)
-      (through the __index of the parent object)
-    - the `formatters` table inside the parent
-    The last one is what makes it possible to directly call
-    “sibling” formatters, but NOTE: the target of that link is always
-    a Formatter instance and not the original formatter template/function.
 --]]
 Formatter.__index = function (t, key)
     return Formatter[key]
     or t:parent()[key]
-    or t:parent().formatters[key]
+    or lua_templates[key]
 end
 
 function Formatter:new(parent, key, formatter)
