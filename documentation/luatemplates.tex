@@ -1721,7 +1721,11 @@ function definition happens as a value assignment within a table constructor and
 should therefore be followed by a comma to separate it from any following table
 fields -- failing to provide that is an easy-to-occur and hard-to-spot omission.
 
-Finally it should be mentioned that -- as these \luatemplates\ functions assign a function to a variable it is also possible to assign a function that has previously been defined, for example as a local function, which would also give access to create closures (as demonstrated in the example \vref{sec:examples-closures}).
+Finally it should be mentioned that -- as these \luatemplates\ functions assign
+a function to a variable it is also possible to assign a function that has
+previously been defined, for example as a local function, which would also give
+access to create closures (as demonstrated in the example
+\vref{sec:examples:closures}).
 
 \begin{minted}{lua}
 local function foo_local(self, text)
@@ -1872,6 +1876,14 @@ arguments to other macros.%
 \footnote{\NOTE{TODO:} Look for functionality to convert other datatypes, if
 that should be what is necessary, e.g. for calculations. Probably that's
 implemented in lyluatex-lib already.}
+
+In some cases it is necessary to treat the optional argument not as a
+\texttt{key=value} option list but as a single string, e.g. if the argument is
+just optionally providing a single value.  For these cases the processed
+\luavar{options} table contains the field \luavar{options.\_original} that can
+be used instead of the regular lookup keys.  If no optional argument has been
+given this field will contain an empty string.  See \vref{sec:examples:closures}
+for an example.
 
 \paragraph{Manual Option Processing}
 
@@ -2517,7 +2529,7 @@ subdirectory of the repository.
 
 
 \subsubsection{Closures}
-\label{sec:examples-closures}
+\label{sec:examples:closures}
 
 This is in its essence not a \luatemplates\ demonstration but rather a Lua idiom, but it perfectly illustrates how the package makes it easy to exploit programming in a language like Lua.
 
