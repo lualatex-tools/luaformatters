@@ -37,10 +37,10 @@ Templates.__index = Templates
 _G['lua_templates'] = Templates
 
 -- Load supporting modules
-local Formatter = require('luatemplates.formatter')
-local TemplatesTable = require('luatemplates.templates-table')
+local Formatter = require('luatemplates-formatter')
+local TemplatesTable = require('luatemplates-templatestable')
 -- load supporter functions and hook them into the Templates table.
-for k, v in pairs(require('luatemplates.support')) do
+for k, v in pairs(require('luatemplates-support')) do
     Templates[k] = v
 end
 
@@ -300,6 +300,6 @@ end
 handle_dependencies()
 
 -- Register the built-in formatters.
-Templates:add(require('luatemplates.builtins'))
+Templates:add(require('luatemplates-builtins'))
 
 return Templates
