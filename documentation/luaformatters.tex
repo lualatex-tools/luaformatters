@@ -134,19 +134,22 @@ this manual.%
 \subsection{Dependencies and Installation}
 \label{sec:dependencies-and-installation}
 
-The package depends on the \package{lyluatextools} package, which is at this
-point only available through the development repository of \package{lyluatex} at
-\url{https://github.com/jperon/lyluatex}.  When \luaformatters\ will be
-released to CTAN and eventually hit the \TeX\ distributions we'll make sure the
-package releases are in sync.
+\luaformatters\ depends on the \package{luaoptions} package%
+\footnote{\url{https://github.com/lualatex-tools/luaoptions}} %
+which at this point is only available from its development repository. \package{luaoptions} has been developed for and part of Jacques Peron's \package{lyluatex} package%
+\footnote{\url{https://github.com/jperon/lyluatex}} %
+but has been extracted as a standalone package to make the option handling
+functionality generally available.  When \luaformatters\ will be released to
+CTAN and eventually hit the \TeX\ distributions we'll make sure the package
+releases are in sync.
 
 Installation is done the usual way, by making the package's files
-\texttt{luaformatters.sty} and \texttt{luaformatters.lua} available to the
-\textsc{texmf} tree. Note that at this point the package can only be used from
-the Github development repository at
-\url{https://github.com/uliska/luaformatters}.
+(\texttt{luaformatters.sty} and \texttt{luaformatters.lua} and the
+\texttt{submodules} folder) available to the \textsc{texmf} tree. Note that at
+this point the package can only be used from the Github development repository
+at \url{https://github.com/uliska/luaformatters}.
 
-\textbf{NOTE:} It should go without saying, but better safe than sorry: Since
+\NOTE{NOTE:} It should go without saying, but better safe than sorry: Since
 this package relies heavily on Lua code it can only be compiled with
 \package{lualatex}.
 
@@ -705,6 +708,8 @@ one defined. (The output is wrapped in a \texttt{quote} environment for better c
 
 \section{Usage}
 \label{sec:usage}
+
+%\setluaoption{formattersopts}{default-color}{green}
 
 The main task of a package author using \luaformatters\ is creating and
 maintaining a \term{Formatters Table}, which is described in this section of the
