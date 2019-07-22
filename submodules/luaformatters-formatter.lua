@@ -62,7 +62,7 @@ function Formatter:new(parent, key, formatter)
     o._name = Formatter._make_name(o, key)
     -- assign options declaration if given
     if formatter.options then
-        o._options = lyluatex_options.Opts:new(nil, formatter.options)
+        o._options = lua_options.Opts:new(nil, formatter.options)
         formatter.options = nil
     end
     -- copy all properties that are given explicitly

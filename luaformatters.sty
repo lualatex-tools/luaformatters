@@ -1,11 +1,11 @@
 \NeedsTeXFormat{LaTeX2e}%
 \ProvidesPackage{luaformatters}[2019/07/10 v0.8]
 
-\RequirePackage{lyluatextools}
+\RequirePackage{luaoptions}
 
 % Options
 \directlua{
-  local _opts = lyluatex_options
+  local _opts = lua_options
   formatters_opts = _opts.Opts:new('formatters_opts', {
     ['color'] = {'false', 'true', ''},
       ['default-color'] = {'blue'},
