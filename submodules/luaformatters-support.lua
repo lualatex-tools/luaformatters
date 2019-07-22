@@ -1,5 +1,5 @@
 local err, warn, info, log = luatexbase.provides_module({
-    name               = "luatemplates.support",
+    name               = "luaformatters.support",
     version            = '0.8',
     date               = "2019/07/02",
     description        = "Lua module for templating. Supporting functions.",
@@ -11,8 +11,8 @@ local err, warn, info, log = luatexbase.provides_module({
 --[[
     This file implements support functions that can be used from any
     formatter using the self:... notation. The functions will be stored in the
-    main Templates table lua_templates and are defined in a separate file to
-    better separate between the genuine tasks of the Templates table and these
+    main Formatters table lua_formatters and are defined in a separate file to
+    better separate between the genuine tasks of the Formatters table and these
     supporting functions.
 --]]
 

@@ -1,17 +1,17 @@
 local err, warn, info, log = luatexbase.provides_module({
-    name               = "luatemplates.templates-table",
+    name               = "luaformatters.templates-table",
     version            = '0.8',
     date               = "2019/07/02",
-    description        = "luatemplates, Base table for Templates Tables.",
+    description        = "luaformatters, Base table for Formatters Tables.",
     author             = "Urs Liska",
     copyright          = "2019- Urs Liska",
     license            = "GPL3",
 })
 
-local TemplatesTable = {}
-TemplatesTable.__index = TemplatesTable
+local FormattersTable = {}
+FormattersTable.__index = FormattersTable
 
-function TemplatesTable:new(properties)
+function FormattersTable:new(properties)
 --[[
     Create new instance.
     The argument may either be a name or a table with at least a `name` field.
@@ -20,7 +20,7 @@ function TemplatesTable:new(properties)
       prefix to use for generated macro names
     - `strict`
       if set to true formatters may only be added to existing subtables
-      (either created manually or through TemplatesTables:provide_namespace)
+      (either created manually or through FormattersTables:provide_namespace)
     - `namespace`
       if set (a single string or a table) create the given namespace.
     - `formatters`
@@ -36,7 +36,7 @@ function TemplatesTable:new(properties)
     end
     local o = {
         _name = properties.name or err([[
-    Trying to create a new Templates Table
+    Trying to create a new Formatters Table
     without specifying a name.
     ]]),
         _prefix = properties.prefix,
@@ -52,14 +52,14 @@ function TemplatesTable:new(properties)
     else
         o._strict = properties.strict
     end
-    setmetatable(o, TemplatesTable)
+    setmetatable(o, FormattersTable)
     if properties.namespace then
         self.provide_namespace(o, properties.namespace)
     end
     return o
 end
 
-function TemplatesTable:add_configuration(...)
+function FormattersTable:add_configuration(...)
 --[[
     Add configuration to the table.
     The variable arguments can consist of zero or one strings and a a table.
@@ -71,7 +71,7 @@ function TemplatesTable:add_configuration(...)
     publishing a previously hidden formatter.
       NOTE: It is not clear what happens when the name of a previously
       *published* formatter is changed: see
-      https://github.com/uliska/luatemplates/issues/34
+      https://github.com/uliska/luaformatters/issues/34
 --]]
 
     local function get_formatter_entry(key)
@@ -86,7 +86,7 @@ function TemplatesTable:add_configuration(...)
         })
         if not parent then
             -- Look for a previously registered formatter
-            formatter = lua_templates:formatter(key)
+            formatter = lua_formatters:formatter(key)
         end
         if formatter then return formatter end
 
@@ -126,14 +126,14 @@ but no formatter found at key
                     entry:update(formatter)
                     -- Store an additional reference in “our” formatters list,
                     -- (create that if necessary)
-                    if not lua_templates._formatters[self._name] then
-                        lua_templates._formatters[self._name] = {}
+                    if not lua_formatters._formatters[self._name] then
+                        lua_formatters._formatters[self._name] = {}
                     end
-                    lua_templates._formatters[self._name][key] = entry
+                    lua_formatters._formatters[self._name][key] = entry
                 else
                     -- The formatter has only been provided by the current
                     -- client. Modify in-place, Formatter object will be
-                    -- created in Templates:add()
+                    -- created in Formatters:add()
                     for k,v in pairs(formatter) do
                         entry[k] = v
                     end
@@ -153,13 +153,13 @@ local function err_namespace(key)
     %s
     To allow this either create
     the node manually or through
-    TemplatesTable:provide_namespace(),
+    FormattersTable:provide_namespace(),
     or set the 'strict' property
     for this table to 'false'.
     ]], key))
 end
 
-function TemplatesTable:_add_formatter(root, key, formatter)
+function FormattersTable:_add_formatter(root, key, formatter)
 --[[
     Add a single formatter at a specific key.
     - `key`
@@ -177,7 +177,7 @@ function TemplatesTable:_add_formatter(root, key, formatter)
     parent[last_key] = formatter
 end
 
-function TemplatesTable:add_formatters(...)
+function FormattersTable:add_formatters(...)
 --[[
     Add a number of formatters to the table.
     root is either self.formatters or self._local_formatters.
@@ -208,30 +208,30 @@ function TemplatesTable:add_formatters(...)
     end
 end
 
-function TemplatesTable:add_formatter(key, formatter)
--- See TemplatesTable:_add_formatter
+function FormattersTable:add_formatter(key, formatter)
+-- See FormattersTable:_add_formatter
     self:_add_formatter(self.formatters, key, formatter)
 end
 
-function TemplatesTable:add_local_formatter(key, formatter)
--- See TemplatesTable:_add_formatter
+function FormattersTable:add_local_formatter(key, formatter)
+-- See FormattersTable:_add_formatter
     self:_add_formatter(self._local, key, formatter)
 end
 
-function TemplatesTable:add_local_formatters(formatters)
--- See TemplatesTable:_add_formatters
+function FormattersTable:add_local_formatters(formatters)
+-- See FormattersTable:_add_formatters
     for k, v in pairs(formatters) do
         self:add_local_formatter(k, v)
     end
 end
 
-function TemplatesTable:configure_formatter(key, properties)
+function FormattersTable:configure_formatter(key, properties)
 --[[
     Apply manual configuration to a given item.
     This can be used to expose hidden (e.g. built-in) formatters as
     LaTeX macros, or to extend the configuration of registered formatters,
     typically used for formatter functions that have been defined
-    with the standalone `function Templates:<name>` syntax.
+    with the standalone `function Formatters:<name>` syntax.
     If `properties` is a string it is considered to be the formatter's new name.
     To publish a hidden formatter the `name` field must be provided with a
     string that doesn't start with an underscore.
@@ -251,13 +251,13 @@ function TemplatesTable:configure_formatter(key, properties)
     self.configuration[key] = properties
 end
 
-function TemplatesTable:name()
+function FormattersTable:name()
     return self._name
 end
 
-function TemplatesTable:node(path, root, create)
+function FormattersTable:node(path, root, create)
 --[[
-    Return a node in the TemplatesTable.formatters subtree,
+    Return a node in the FormattersTable.formatters subtree,
     creating nodes along the way if necessary (and the `create`
     argument is true).
 --]]
@@ -278,7 +278,7 @@ function TemplatesTable:node(path, root, create)
     return cur_node
 end
 
-function TemplatesTable:parent_node(key, roots, opts)
+function FormattersTable:parent_node(key, roots, opts)
 --[[
     Retrieve the parent node from a given dot-list key.
     Return the parent node and the trailing key element.
@@ -307,11 +307,11 @@ function TemplatesTable:parent_node(key, roots, opts)
     return nil, nil
 end
 
-function TemplatesTable:prefix()
+function FormattersTable:prefix()
     return self._prefix or ''
 end
 
-function TemplatesTable:provide_namespace(keys)
+function FormattersTable:provide_namespace(keys)
 --[[
     Verify the existence or create nodes for all given keys.
     This can serve as documentation and to simplify coding
@@ -328,4 +328,4 @@ function TemplatesTable:provide_namespace(keys)
     end
 end
 
-return TemplatesTable
+return FormattersTable

@@ -1,12 +1,12 @@
 \NeedsTeXFormat{LaTeX2e}%
-\ProvidesPackage{luatemplates}[2019/07/10 v0.8]
+\ProvidesPackage{luaformatters}[2019/07/10 v0.8]
 
 \RequirePackage{lyluatextools}
 
 % Options
 \directlua{
   local _opts = lyluatex_options
-  template_opts = _opts.Opts:new('template_opts', {
+  formatters_opts = _opts.Opts:new('formatters_opts', {
     ['color'] = {'false', 'true', ''},
       ['default-color'] = {'blue'},
     ['element-separator'] = {	'{,}' },
@@ -28,20 +28,20 @@
   })
 }
 
-% Instantiate the main Templates table.
-% Is now available as a global variable `lua_templates`
-\directlua{require(kpse.find_file("luatemplates.lua") or "luatemplates.lua")}
+% Instantiate the main Formatters table.
+% Is now available as a global variable `lua_formatters`
+\directlua{require(kpse.find_file("luaformatters.lua") or "luaformatters.lua")}
 
-% Add a “client” to lua_templates
+% Add a “client” to lua_formatters
 % - #1: client name
-%       has to be unique among all clients registered with luatemplates
+%       has to be unique among all clients registered with luaformatters
 %       (within one document, including all loaded packages)
 % - #2: Lua module filename
 %       Name of a file (which has to be available to 'require')
 %       This file must return a templatestable.
-\newcommand*{\addLuaTemplates}[1]{%
+\newcommand*{\addLuaFormatters}[1]{%
   \directlua{
-    lua_templates:add(require(kpse.find_file([[\string#1]]) or [[\string#1]]))
+    lua_formatters:add(require(kpse.find_file([[\string#1]]) or [[\string#1]]))
   }
 }
 
@@ -49,8 +49,8 @@
 % Boolean values have to be specified explicitly (different from setting
 % *package* options on loading).
 % Note that not all options can *reasonably* be changed after loading.
-\newcommand*{\luatemplatesSetOption}[2]{
-\directlua{template_opts.set_option(template_opts,
+\newcommand*{\luaformattersSetOption}[2]{
+\directlua{formatters_opts.set_option(formatters_opts,
   '\luatexluaescapestring{#1}',
   '\luatexluaescapestring{#2}')}
 }

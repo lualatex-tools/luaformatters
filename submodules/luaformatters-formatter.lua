@@ -1,8 +1,8 @@
 local err, warn, info, log = luatexbase.provides_module({
-    name               = "luatemplates.formatter",
+    name               = "luaformatters.formatter",
     version            = '0.8',
     date               = "2019/07/02",
-    description        = "luatemplates, Formatter handling.",
+    description        = "luaformatters, Formatter handling.",
     author             = "Urs Liska",
     copyright          = "2019- Urs Liska",
     license            = "GPL3",
@@ -12,7 +12,7 @@ local err, warn, info, log = luatexbase.provides_module({
     Formatter class.
     This class is a wrapper and abstraction around a formatter
     template or function.  When a formatter entry table is registered
-    with lua_templates it is replaced with a new Formatter instance.
+    with lua_formatters it is replaced with a new Formatter instance.
 
     The data is stored in local fields and exposed through getter/setter
     functions that should be used from outside.
@@ -29,13 +29,13 @@ local Formatter = {}
     in the following order:
     - the concrete instance
     - the Formatter prototype (the code in this file)
-    - the “parent”, which is a lua_templates “client”
-    - lua_templates (the Templates table)
+    - the “parent”, which is a lua_formatters “client”
+    - lua_formatters (the Formatters table)
 --]]
 Formatter.__index = function (t, key)
     return Formatter[key]
     or t:parent()[key]
-    or lua_templates[key]
+    or lua_formatters[key]
 end
 
 function Formatter:new(parent, key, formatter)
@@ -54,7 +54,7 @@ function Formatter:new(parent, key, formatter)
         _macro_args = {},
         -- key for accessing the formatter
         _key = key,
-        -- lua_templates “client”
+        -- lua_formatters “client”
         _parent = parent,
     }
     setmetatable(o, Formatter)
@@ -151,7 +151,7 @@ function Formatter:check_options(options, ignore_declarations)
             loc_opts = self._options:check_local_options(options)
         else
             -- use the package's generic tool without validation
-            loc_opts = template_opts:check_local_options(options, true)
+            loc_opts = formatters_opts:check_local_options(options, true)
         end
         for k, v in pairs(loc_opts) do
             -- validate against expected values/types
@@ -216,7 +216,7 @@ but package option 'self-documentation' seems not to be active
     local result = ''
 
     -- Prepend a line comment if present and not disabled
-    if (not options.nocomment and template_opts['doc-comment'])
+    if (not options.nocomment and formatters_opts['doc-comment'])
     and self:comment() ~= '' then
         result = string.format([[
 %% %s
@@ -330,7 +330,7 @@ function Formatter:is_hidden()
 --[[
     A formatter is considered “hidden” if its name or any segment of its key
     starts with an underscore.
-    A hidden formatter may still be used through Templates:format(),
+    A hidden formatter may still be used through Formatters:format(),
     but no LaTeX macro is generated.
 --]]
     if self._name:sub(1, 1) == '_' then return true end
@@ -366,7 +366,7 @@ function Formatter:parent()
 --[[
     Return a formatter's parent object.
     The “parent” is the templates table that has originally been passed
-    to Templates:new as 'client'.
+    to Formatters:new as 'client'.
 --]]
     return self._parent
 end
@@ -464,7 +464,7 @@ function Formatter:_check_explicit_template_args()
     - If an argument doesn't have a corresponding field, produce an error.
 
     TODO: Make sure this code can't be considerably condensed ...
-    https://github.com/uliska/luatemplates/issues/31
+    https://github.com/uliska/luaformatters/issues/31
 --]]
     local fields = self:fields()
     local _fields, _args = {}, {}
@@ -509,7 +509,7 @@ end
 function Formatter:_create_macro()
 --[[
     Create a LaTeX macro from the given entry.
-    All generated LaTeX macro work by calling Templates:write() in a
+    All generated LaTeX macro work by calling Formatters:write() in a
     \directlua macro, passing their arguments to a specific formatter,
     either as a vararg to a function or as a replacement table to a
     template-based formatter.
@@ -524,7 +524,7 @@ function Formatter:_create_macro()
     local wrapper_template = [[
 \newcommand{\<<<name>>>}<<<argnums>>>{\directlua{<<<lua>>>}}]]
     local lua_template = [[
-lua_templates:write({ '<<<formatter>>>', '<<<color>>>' }<<<args>>>)]]
+lua_formatters:write({ '<<<formatter>>>', '<<<color>>>' }<<<args>>>)]]
 
     -- Populate templates with actual data
     wrapper_template = wrapper_template:gsub(
@@ -538,7 +538,7 @@ lua_templates:write({ '<<<formatter>>>', '<<<color>>>' }<<<args>>>)]]
     self._macro = wrapper_template:gsub('<<<lua>>>', lua_template)
 
     -- Create docstring for the macro
-    if template_opts['self-documentation'] then
+    if formatters_opts['self-documentation'] then
         local doc_template = [[
 \<<<name>>><<<opt>>><<<args>>>]]
         local argstring = ''
@@ -592,7 +592,7 @@ function Formatter:_format_args()
 --[[
     Return a string used as the argument specification in a created
     macro. Arguments are the last elements in the \directlua call
-    to lua_templates:write().
+    to lua_formatters:write().
 --]]
     local args = ''
     -- Skip if there are no arguments
@@ -730,7 +730,7 @@ function Formatter:_set_args_from_template()
             err(string.format([[
     Error configuring template.
     Can't automatically determine the order
-    of arguments in Templates with more than
+    of arguments in Formatters with more than
     one (plus 'options') fields. Please
     specify arguments manually:
     %s

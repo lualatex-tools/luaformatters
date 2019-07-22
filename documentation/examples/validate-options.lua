@@ -5,7 +5,7 @@
     argument. 
 --]]
 
-local VALIDATION = lua_templates:new{
+local VALIDATION = lua_formatters:new{
     name = 'form',
 }
 
@@ -36,7 +36,7 @@ VALIDATION:add_configuration{
     },
     gap = {
         options = {
-            ['width'] = { '3em', template_opts.is_dim },
+            ['width'] = { '3em', formatters_opts.is_dim },
             ['rule'] = { 'false', 'true', '' },
         }
     }

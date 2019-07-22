@@ -1,9 +1,9 @@
 
-% This is the manual for the luatemplates package.
+% This is the manual for the luaformatters package.
 % Along with the files
-% - luatemplates-manual-templates.lua
+% - luaformatters-manual-templates.lua
 % - examples/*.lua and examples/*.tex
-% - luatemplates-manual-config-mwe.lua
+% - luaformatters-manual-config-mwe.lua
 % the source itself serves as documentation to the package,
 % its use and programming.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -12,7 +12,7 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% The following includes are general for the writing of this document
-%% and not related to the working of luatemplates
+%% and not related to the working of luaformatters
 \RequirePackage{fontspec}
 \RequirePackage{microtype}
 \RequirePackage[oldstyle,proportional]{libertine}
@@ -35,34 +35,34 @@
 %% End general includes
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% Use or require the `luatemplates` package with (some of the) options
+% Use or require the `luaformatters` package with (some of the) options
 % NOTE: option self-documentation implicitly loads minted, so that doesn't
 % have to be included explicitly for the writing of this document.
 \usepackage[
 color,              % use colors
 self-documentation, % Create the self-documentation commands
-]{luatemplates}
+]{luaformatters}
 
-% Set up the Templates object, passing a variable name prefix
+% Set up the Formatters object, passing a variable name prefix
 % and a configuration file name.
-% The Templates object will later be globally available to Lua by the name
+% The Formatters object will later be globally available to Lua by the name
 % manual_templates and could be adressed as such from any \directlua command.
-% luatemplates-manual-config.lua must be findable by LaTeX.
-\addLuaTemplates{luatemplates-manual-templates}
+% luaformatters-manual-config.lua must be findable by LaTeX.
+\addLuaFormatters{luaformatters-manual-templates}
 
 % Add further templates files. Separate clients are added to be able to
 % *list* them at the end of the manual.
-\addLuaTemplates{examples/closure}
-\addLuaTemplates{examples/format}
-\addLuaTemplates{examples/local-formatters.lua}
+\addLuaFormatters{examples/closure}
+\addLuaFormatters{examples/format}
+\addLuaFormatters{examples/local-formatters.lua}
 
 % Remaining functionality that is used in the manual
 % but not suitable for listings
-\addLuaTemplates{examples/additionals}
+\addLuaFormatters{examples/additionals}
 
 \setminted[lua]{tabsize=4}
 
-\title{\luatemplates}
+\title{\luaformatters}
 \subtitle{v0.8}
 \author{Urs Liska}
 \date{\today}
@@ -73,7 +73,7 @@ self-documentation, % Create the self-documentation commands
 
 \begin{abstract}
 
-\luatemplates\ is a package for Lua\LaTeX\ designed to assist package
+\luaformatters\ is a package for Lua\LaTeX\ designed to assist package
 and document authors with the recurring task of \emph{templating}.  It
 substantially reduces the complexity of interfacing the \LaTeX\ and the Lua
 domains, making it simpler to approach the development of document preambles and
@@ -100,7 +100,7 @@ the first stable release.  Since the issue list includes a number of fundamental
 enhancements and maybe also changes until that milestone it seems more
 reasonable to wait until all the functionality is settled and \emph{then}
 reconsider the outline of the manual.  See
-\url{https://github.com/uliska/luatemplates/issues/37} fur the current state of
+\url{https://github.com/uliska/luaformatters/issues/37} fur the current state of
 this discussion.
 
 
@@ -114,7 +114,7 @@ this discussion.
 
 Templating is one of the most common techniques applied when writing \LaTeX\
 packages,%
-\footnote{Packages and document preambles are generally considered synonymous in this manual, since it doesn't make a difference with regard to \luatemplates.} %
+\footnote{Packages and document preambles are generally considered synonymous in this manual, since it doesn't make a difference with regard to \luaformatters.} %
 especially when Lua is involved which encourages using \LaTeX\ not
 only as a \emph{typesetting} but also as a \emph{document/content generation}
 system.  Very often one takes some data (from macro arguments), processes it
@@ -133,16 +133,16 @@ corresponding \LaTeX\ macros are generated automatically. Additionally the
 package provides tools for and encourages using modular approaches to creating
 templates and styles.
 
-This manual is of course written using \luatemplates, and therefore it is
+This manual is of course written using \luaformatters, and therefore it is
 strongly recommended to study the sources too, not only the compiled PDF file.
 Depending on the installation type these may be found in different places.  If
 you read this from a \TeX\ Live installation try \texttt{kpsewhich
-luatemplates.tex} and \texttt{kpsewhich luatemplates-manual-config.lua} to get
+luaformatters.tex} and \texttt{kpsewhich luaformatters-manual-config.lua} to get
 their exact location.  Other example files should be located in the same place.
 A number of general and specific example files are listed in
 \vref{sec:examples}, and they are also available as files beside the sources for
 this manual.%
-\footnote{\url{https://github.com/uliska/luatemplates/tree/master/documentation}.%
+\footnote{\url{https://github.com/uliska/luaformatters/tree/master/documentation}.%
 \footnote{\textbf{TODO:} Clarify where they end up in TeX Live.}}
 
 \subsection{Dependencies and Installation}
@@ -150,15 +150,15 @@ this manual.%
 
 The package depends on the \package{lyluatextools} package, which is at this
 point only available through the development repository of \package{lyluatex} at
-\url{https://github.com/jperon/lyluatex}.  When \luatemplates\ will be
+\url{https://github.com/jperon/lyluatex}.  When \luaformatters\ will be
 released to CTAN and eventually hit the \TeX\ distributions we'll make sure the
 package releases are in sync.
 
 Installation is done the usual way, by making the package's files
-\texttt{luatemplates.sty} and \texttt{luatemplates.lua} available to the
+\texttt{luaformatters.sty} and \texttt{luaformatters.lua} available to the
 \textsc{texmf} tree. Note that at this point the package can only be used from
 the Github development repository at
-\url{https://github.com/uliska/luatemplates}.
+\url{https://github.com/uliska/luaformatters}.
 
 \textbf{NOTE:} It should go without saying, but better safe than sorry: Since
 this package relies heavily on Lua code it can only be compiled with
@@ -168,17 +168,17 @@ this package relies heavily on Lua code it can only be compiled with
 \subsection{Setting Things Up}
 \label{sec:setup}
 
-To use \luatemplates\ in a document three steps have to be performed,
+To use \luaformatters\ in a document three steps have to be performed,
 two of which being extremely straightforward. First of all the package
 has to be loaded:
 
 \begin{minted}{tex}
-\usepackage{luatemplates}
+\usepackage{luaformatters}
 \end{minted}
 
-\noindent Once the package is loaded a global Lua variable \luatemplates\ is
-available, which is referred to as the \term{Templates Library}.%
-\footnote{This variable references the \luavar{Templates} table defined in the
+\noindent Once the package is loaded a global Lua variable \luaformatters\ is
+available, which is referred to as the \term{Formatters Library}.%
+\footnote{This variable references the \luavar{Formatters} table defined in the
 package's Lua file.  Usually it will not be necessary to access this directly,
 rather it is used for the operation of the automatically generated \LaTeX\
 macros (\vref{sec:creating-macros}). However there may be occasions where it is
@@ -187,55 +187,55 @@ There are a number of package options that configure the package's behaviour,
 which will be discussed in \vref{sec:option-handling}.%
 
 The main task, i.e. the creative and development work for working with
-\luatemplates\ is to create one Lua table (referred to as
-\term{Templates Table} throughout this document) holding all the declarations
+\luaformatters\ is to create one Lua table (referred to as
+\term{Formatters Table} throughout this document) holding all the declarations
 and implementations for a given package.  The specifics of that table are
 documented towards the end of the manual in
 \vref{sec:advanced:tables-and-objects} -- but luckily it is rarely
 necessary to actually get in touch with the raw structure of that table.
-\luatemplates\ provides convenient tools to maintain a \term{Templates
+\luaformatters\ provides convenient tools to maintain a \term{Formatters
 Table}, which are covered by the main parts of the manual. Typically the table
 is maintained in and returned by a separate Lua file/module.
 
 \medskip
 
-Finally the \term{Templates Table} has to be added to the \term{Templates
+Finally the \term{Formatters Table} has to be added to the \term{Formatters
 Library}:
 
 \begin{minted}{tex}
-\addLuaTemplates{<file name>}
+\addLuaFormatters{<file name>}
 \end{minted}
 
-\noindent pointing to a Lua file which returns a well-formed \term{Templates
+\noindent pointing to a Lua file which returns a well-formed \term{Formatters
 Table}, which in turn is registered as a new \term{Client} of the
-\term{Templates Library}. This is all that has to be done on the \LaTeX\ side to
-set up \luatemplates. A Minimal Working Example consisting of a
+\term{Formatters Library}. This is all that has to be done on the \LaTeX\ side to
+set up \luaformatters. A Minimal Working Example consisting of a
 \texttt{.lua} and a \texttt{.tex} file is listed in \vref{sec:examples}.
 
-Multiple \term[Templates Table]{Templates Tables} can be added to the
-\term{Templates Library}, for example by loading multiple packages that make use
+Multiple \term[Formatters Table]{Formatters Tables} can be added to the
+\term{Formatters Library}, for example by loading multiple packages that make use
 of the system, or to compose the final macro library from various modules.
-\term[Templates Table]{Templates Tables} can also \emph{use} functionality
-provided by other registered \term[Templates Table]{Templates Tables}.%
+\term[Formatters Table]{Formatters Tables} can also \emph{use} functionality
+provided by other registered \term[Formatters Table]{Formatters Tables}.%
 \footnote{\textbf{TODO:} Currently there is no consistent handling when
-\term[Templates Table]{Templates Tables} cause name clashes of any sorts. Tables
+\term[Formatters Table]{Formatters Tables} cause name clashes of any sorts. Tables
 added later will silently overwrite previous declarations, possibly breaking
 everything. This has to be resolved, see
-\url{https://github.com/uliska/luatemplates/issues/24}.} %
+\url{https://github.com/uliska/luaformatters/issues/24}.} %
 The templates for this manual makes use of this too: the functionality has been
 split into one main file which also serves as a heavily commented example
 (printed in \vref{sec:examples:manual-templates}), some others listed to show
 specific concepts, plus a final file that simply holds stuff that is just
 \emph{used} in the manual but wasn't considered suitable for examples listings.
 Stripped off the comments the relevant section in the manual's \texttt{.tex}
-file \texttt{luatemplates.tex} looks like this:
+file \texttt{luaformatters.tex} looks like this:
 
 \begin{minted}{tex}
-\usepackage[color,self-documentation]{luatemplates}
+\usepackage[color,self-documentation]{luaformatters}
 
-\addLuaTemplates{luatemplates-manual-templates}
-\addLuaTemplates{examples/closure}
-\addLuaTemplates{examples/additionals}
+\addLuaFormatters{luaformatters-manual-templates}
+\addLuaFormatters{examples/closure}
+\addLuaFormatters{examples/additionals}
 \end{minted}
 
 
@@ -306,22 +306,22 @@ colored output and to use coloring as a visual checker for correct entry.
 \subsection{Main Objects and Actions}
 \label{sec:main-objects-and-actions}
 
-Before going into the details of working with \luatemplates\ it is
+Before going into the details of working with \luaformatters\ it is
 necessary to describe a number of common terms and concepts to get an idea
-about the overall design and goals of the package.  The following section will give an overview of the major objects and entities involved, and of the process of creating a \term{Templates Table}.
+about the overall design and goals of the package.  The following section will give an overview of the major objects and entities involved, and of the process of creating a \term{Formatters Table}.
 
-\subsubsection{The Templates Table}
+\subsubsection{The Formatters Table}
 \label{sec:intro-the-templates-table}
 
 As already mentioned above any given package has to create and maintain a
-\term{Templates Table}.  Technically this is a Lua table which is expected to
+\term{Formatters Table}.  Technically this is a Lua table which is expected to
 have a certain structure and which defines the behaviour, the interface, and
 above all the \emph{formatters} that will be automatically made available as
 \LaTeX\ macros.  While this table could be composed manually there is a base
-class \luavar{TemplatesTable} available that provides a number of useful tools
-to make maintaining a \term{Templates Table} as clean and painless as possible.
+class \luavar{FormattersTable} available that provides a number of useful tools
+to make maintaining a \term{Formatters Table} as clean and painless as possible.
 
-Information about working with a \term{Templates Table} is given in
+Information about working with a \term{Formatters Table} is given in
 \vref{sec:usage} (and its subsections) while
 \vref{sec:advanced:tables-and-objects} provides in-depth documentation of
 the structural foundations.
@@ -330,9 +330,9 @@ the structural foundations.
 \subsubsection{(Multiple) Clients}
 \label{sec:intro-multiple-clients}
 
-A package's \term{Templates Table} is added to the \term{Templates Library} as a
+A package's \term{Formatters Table} is added to the \term{Formatters Library} as a
 \term{Client}.  Multiple \term[Client]{Clients} can be registered in the
-\term{Templates Library}, and their behaviour is partially merged and partially
+\term{Formatters Library}, and their behaviour is partially merged and partially
 not.  \term[Client]{Clients} can use functionality provided by other
 \term[Client]{Clients}, and they can also modify the behaviour of previously
 registered \term[Client]{Clients}.  \NOTE{Note} that at this point it has not
@@ -346,7 +346,7 @@ problems.%
 \subsubsection{Formatters}
 \label{sec:intro-formatters}
 
-The term \term[Formatter]{Formatters} is somewhat ambiguous in \luatemplates's terminology, and it is important to understand the subtle difference between the three involved concepts.
+The term \term[Formatter]{Formatters} is somewhat ambiguous in \luaformatters's terminology, and it is important to understand the subtle difference between the three involved concepts.
 
 In a narrow sense a \term{Formatter} is either a \emph{string template} or a
 \emph{Lua function} handling input data and returning processed output.  These
@@ -359,7 +359,7 @@ argument.
 
 The task of a \term{Formatter} is very specific and limited to accepting data
 from the macro argument(s) and returning a processed string.  Writing the
-results to \LaTeX\ is handled transparently by \luatemplates, and this
+results to \LaTeX\ is handled transparently by \luaformatters, and this
 separation of concerns allows the modular reuse of Formatters within the Lua
 domain.
 
@@ -368,7 +368,7 @@ domain.
 \label{sec:intro-formatter-entry-tables}
 
 In the stage of \emph{declaring} the functionality \term[Formatter]{Formatters}
-are added to the \term{Templates Table}, and often they are wrapped in a
+are added to the \term{Formatters Table}, and often they are wrapped in a
 \term{Formatter Entry Table}.  This is a flat Lua table holding an actual
 Formatter and providing some configuration data about it.
 
@@ -376,19 +376,19 @@ Formatter and providing some configuration data about it.
 \subsubsection{Formatter Objects}
 \label{sec:intro-formatter-objects}
 
-During the registration of a \term{Templates Table} as a \term{Client} to the
-\term{Templates Library} all Formatters are converted to real \term[Formatter
+During the registration of a \term{Formatters Table} as a \term{Client} to the
+\term{Formatters Library} all Formatters are converted to real \term[Formatter
 Object]{Formatter Objects}, i.e. instances of the \luavar{Formatter} class.
 These objects are in some sense pretty similar to the \term[Formatter Entry
 Table]{Formatter Entry Tables} but far more powerful, providing the core
 functionality for creating \LaTeX\ macros and self-documentation. However, this
-conversion is done transparently by \luatemplates, and package authors
+conversion is done transparently by \luaformatters, and package authors
 usually don't have to know much about them.
 
 \subsubsection{Declaring Formatters}
 \label{sec:intro-declaring-formatters}
 
-The most common task of a package author is to create \term[Formatter]{Formatters} and declare them by adding them to the \term{Templates Table}, either directly or wrapped in \term[Formatter Entry]{Formatter Entries}.  Details about this process are documented in \vref{sec:usage:declaring-formatters}.
+The most common task of a package author is to create \term[Formatter]{Formatters} and declare them by adding them to the \term{Formatters Table}, either directly or wrapped in \term[Formatter Entry]{Formatter Entries}.  Details about this process are documented in \vref{sec:usage:declaring-formatters}.
 
 
 \subsubsection{Creating Macros}
@@ -412,14 +412,14 @@ For various reasons it may be necessary to add properties to a \term{Formatter} 
 \subsubsection{Publishing Built-in Formatters}
 \label{sec:intro-publishing-builtin-formatters}
 
-\luatemplates\ provides a large number of built-in formatters that can be used from custom formatters to design style libraries in modular fashion.  Most of these formatters are rather generic and are therefore hidden by default to prevent the macro namespace from being polluted with macros not requested explicitly.  However, through the configuration process the built-in formatters can be published as \LaTeX\ macros too.  See \vref{sec:usage:publishing-builtin-formatters} for details.
+\luaformatters\ provides a large number of built-in formatters that can be used from custom formatters to design style libraries in modular fashion.  Most of these formatters are rather generic and are therefore hidden by default to prevent the macro namespace from being polluted with macros not requested explicitly.  However, through the configuration process the built-in formatters can be published as \LaTeX\ macros too.  See \vref{sec:usage:publishing-builtin-formatters} for details.
 
 \subsection{General Concepts}
 \label{sec:intro:general-concepts}
 
 There are a few common concepts and general techniques that are worth introducing separately,
 although some of the material has to be detailed later.  One of the more
-interesting features of the \luatemplates\ package is the implicit color
+interesting features of the \luaformatters\ package is the implicit color
 handling which simplifies the creation of macros for actually colored documents
 or can serve as a handy “draft” tool.  Another important feature is the handling
 of macro arguments, which the package can process automatically to a surprising
@@ -429,26 +429,26 @@ percentage.  But to start off with, option handling is described.
 \subsubsection{Option Handling}
 \label{sec:option-handling}
 
-\luatemplates\ makes use of the option handling features of the
+\luaformatters\ makes use of the option handling features of the
 \package{lyluatex} package.%
 \footnote{\textbf{NOTE:} Currently it is not clear to what extent these features will
-be factored out to an independent package, possibly merged with \luatemplates.
+be factored out to an independent package, possibly merged with \luaformatters.
 Also it is not clear whether there will be an independent manual for the option handling
 tools.} %
-This includes the handling of \luatemplates' own package options as
+This includes the handling of \luaformatters' own package options as
 well as providing tools to deal with optional arguments in formatter functions
 and created \LaTeX\ macros.  Additionally it is possible to integrate that with
 standalone instances of \package{lyluatextools}, which will only be touched in
 \vref{sec:advanced-programming}.
 
-\luatemplates\ has a number of package options which will be described
+\luaformatters\ has a number of package options which will be described
 below.  These can be set upon package loading or at any point during the
 document, although not all options may \emph{reasonably} be changed after
 loading.  Package options are specified using the \texttt{key=value} syntax, but
 boolean values can be set to \texttt{true} by simply passing their name:
 \luavar{[color]} is equivalent to \luavar{[color=true]}.
 
-\cmd{luatemplatesSetOption\{key\}\{value\}} can be used to change the value of
+\cmd{luaformattersSetOption\{key\}\{value\}} can be used to change the value of
 an option during the course of the document.  However, depending on the option
 this may or may not have any or the desired results, see below for details.
 Note that boolean values always have to be given explicitly (other than when set
@@ -484,7 +484,7 @@ coloring is switched off for that macro through the pseudo-color
 
 Separator to be used in the built-in formatter \luavar{add\_element}.%
 \footnote{\textbf{NOTE:} This is affected by
-\url{https://github.com/uliska/luatemplates/issues/5}.}
+\url{https://github.com/uliska/luaformatters/issues/5}.}
 
 
 \paragraph{\luavar{number-case} (normal)}
@@ -519,7 +519,7 @@ Separator used when printing a range.  Used by the built-in formatter \luavar{ra
 Separator used for all but the last elements of a list produced by the built-in formatter
 \luavar{list\_format}.%
 \footnote{\textbf{NOTE:} This is affected by
-\url{https://github.com/uliska/luatemplates/issues/5}.}
+\url{https://github.com/uliska/luaformatters/issues/5}.}
 
 
 \paragraph{\luavar{list-last-sep} (' and ')}
@@ -527,7 +527,7 @@ Separator used for all but the last elements of a list produced by the built-in 
 Separator used for the last two elements of a list produced by the built-in formatter
 \luavar{list\_format}.%
 \footnote{\textbf{NOTE:} This is affected by
-\url{https://github.com/uliska/luatemplates/issues/5}.}
+\url{https://github.com/uliska/luaformatters/issues/5}.}
 
 
 \paragraph{\luavar{self-documentation} (boolean, false)}
@@ -540,7 +540,7 @@ described in \vref{sec:self-documentation}.
 \label{sec:coloring}
 
 If the package option \luavar{color} is set to \texttt{true}
-\luatemplates\ supports automatic coloring in various ways.  By default
+\luaformatters\ supports automatic coloring in various ways.  By default
 all macros produced by the package are wrapped in a \cmd{textcolor} macro and
 set to the package's \luavar{default-color} option value.  If not set to a
 different color (see \vref{sec:option-handling}) this will be \texttt{blue}
@@ -551,7 +551,7 @@ colors as a visual indicator in “draft” mode to help me make sure the docume
 is coded properly with the correct semantic markup.  Oftentimes various
 different items will end up styled identically, for example with simple emphasis
 or boldface.  Assigning different colors to the styles is a visual aide for
-proofreading the document, and \luatemplates' approach is a useful tool
+proofreading the document, and \luaformatters' approach is a useful tool
 to make this technique easily configurable and “switchable”.
 
 Note that if a macro hardcodes a \cmd{textcolor} element in the template itself
@@ -578,7 +578,7 @@ them it is not always easy to see how they have to be \emph{used} in documents.
 This is especially a concern for package writers who are not the consumers of
 their own macros (well, actually it's more a problem for the \emph{users} of a
 package who are not the \emph{authors} of the macros \dots).  To help with that
-situation \luatemplates\ provides a self-documentation feature, which is
+situation \luaformatters\ provides a self-documentation feature, which is
 also useful for bug-tracking. When the package is loaded with the
 \luavar{self-documentation} package option set, two things happen: “docstrings”
 are generated for each formatter, and a number of \LaTeX\ macros to typeset the
@@ -708,11 +708,11 @@ one defined. (The output is wrapped in a \texttt{quote} environment for better c
 
 \begin{itemize*}
 \item Provide a command that typesets the available macros from \emph{all} clients.\\
-\url{https://github.com/uliska/luatemplates/issues/28}
+\url{https://github.com/uliska/luaformatters/issues/28}
 \item Add substantial configuration options for the appearance of the documentation.\\
-\url{https://github.com/uliska/luatemplates/issues/26}
+\url{https://github.com/uliska/luaformatters/issues/26}
 \item Provide a command to produce documentation as a standalone \texttt{.tex} document.\\
-\url{https://github.com/uliska/luatemplates/issues/27}
+\url{https://github.com/uliska/luaformatters/issues/27}
 \end{itemize*}
 
 
@@ -720,10 +720,10 @@ one defined. (The output is wrapped in a \texttt{quote} environment for better c
 \section{Usage}
 \label{sec:usage}
 
-The main task of a package author using \luatemplates\ is creating and
-maintaining a \term{Templates Table}, which is described in this section of the
+The main task of a package author using \luaformatters\ is creating and
+maintaining a \term{Formatters Table}, which is described in this section of the
 manual.  Its focus is the handling of the template and the functionality
-\luatemplates\ provides to work with the table, while the specifics of
+\luaformatters\ provides to work with the table, while the specifics of
 writing formatters will be covered in the next main section.  This section will
 necessarily present formatters as examples, but without going in too much detail
 about the topic.  It is always possible to jump back and forth between the
@@ -731,29 +731,29 @@ about the topic.  It is always possible to jump back and forth between the
 understanding.
 
 If not stated otherwise everything in the following sections refers to the work
-in the Lua file whose name is passed to \mintinline{tex}{\addLuaTemplates{}}.
+in the Lua file whose name is passed to \mintinline{tex}{\addLuaFormatters{}}.
 
-\subsection{The Templates Table}
+\subsection{The Formatters Table}
 \label{sec:usage:templates-table}
 
 In order to be registered as a \term{Client} a table must be an instance of the
-\luavar{TemplatesTable} class and eventually returned as a module.  Such an object is instantiated by calling the factory
-function \mintinline{lua}{lua_templates:new()}.  In its most basic form this would look like this:
+\luavar{FormattersTable} class and eventually returned as a module.  Such an object is instantiated by calling the factory
+function \mintinline{lua}{lua_formatters:new()}.  In its most basic form this would look like this:
 
 \begin{minted}{lua}
-local MANUAL = lua_templates:new('manual')
--- defining the contents of the Templates Table
+local MANUAL = lua_formatters:new('manual')
+-- defining the contents of the Formatters Table
 return MANUAL
 \end{minted}
 
-\noindent When the argument to \mintinline{lua}{lua_templates:new()} is a string
+\noindent When the argument to \mintinline{lua}{lua_formatters:new()} is a string
 this is taken as the \term{Template Table}'s name.  This name must be unique
 across all \term[Client]{Clients} that are loaded in the current document, which
 should especially be a concern for \emph{package} authors while the issue seems
 less serious when related to single documents.
 
 
-\subsection{Initializing the Templates Table}
+\subsection{Initializing the Formatters Table}
 \label{sec:usage-initializing-the-template-table}
 
 Typically it is better to pass a \emph{table} to the factory method instead of
@@ -763,13 +763,13 @@ have is \luavar{name}, and the following invocation is equivalent to the
 previous example:
 
 \begin{minted}{lua}
-local MANUAL = lua_templates:new{
+local MANUAL = lua_formatters:new{
 	name = 'manual'
 }
 \end{minted}
 
 \noindent The table passed to the factory function can have certain optional
-fields that can be used to configure the \term{Templates Table} during the
+fields that can be used to configure the \term{Formatters Table} during the
 instantiation. Other than with the \emph{content} elements (formatters) there
 are no provisions to alter these configuration options at a later point.
 
@@ -781,7 +781,7 @@ when writing \emph{packages}.  If this field is set to \luavar{ltx} a macro
 would for example be named \cmd{ltxBookName} instead of \cmd{bookName}.
 
 \begin{minted}{lua}
-local MANUAL = lua_templates:new{
+local MANUAL = lua_formatters:new{
 	name = 'manual',
 	prefix = 'ltx',
 }
@@ -796,9 +796,9 @@ actively supported, but it is intended to be used in the self-documentation
 features (\vref{sec:self-documentation}).
 
 \begin{minted}{lua}
-local MANUAL = lua_templates:new{
+local MANUAL = lua_formatters:new{
 	name = 'manual',
-	display_name = 'luatemplates Manual',
+	display_name = 'luaformatters Manual',
 }
 \end{minted}
 
@@ -808,7 +808,7 @@ Formatters are stored in a potentially nested Lua table that implicitly creates
 a \term{Namespace}, both for the structure of the code and the naming
 conventions of the generated \LaTeX\ macros. By default it is only possible to
 add formatters to \emph{existing} nodes that have previously been created, be it
-through generic Lua means or through \luatemplates' tools
+through generic Lua means or through \luaformatters' tools
 (\vref{sec:usage:declaring-formatters})  However, if the \luavar{strict} field
 is included and set to \texttt{false} this limitation is removed, and the
 commands that add formatters to the table can automatically create missing table
@@ -816,7 +816,7 @@ nodes. Note that this can be at the same time convenient, especially for complex
 namespaces, but it can also lead to unnoticed typos.
 
 \begin{minted}{lua}
-local MANUAL = lua_templates:new{
+local MANUAL = lua_formatters:new{
 	name = 'manual',
 	strict = false,
 }
@@ -829,7 +829,7 @@ field is either a single string or an array of strings, each specifying a “key
 in Lua-style dot notation:
 
 \begin{minted}{lua}
-local MANUAL = lua_templates:new{
+local MANUAL = lua_formatters:new{
 	name = 'manual',
 	namespace = 'music.composer',
 	-- or
@@ -866,18 +866,18 @@ In addition to the \emph{configuration} options documented above it is also
 possible to add one or both of two “content” subtables, \luavar{formatters} and
 \luavar{configuration}.  While there are no serious arguments to be made against
 this approach it is not exactly recommended for general use, because it somewhat
-goes against the idea of \luatemplates. But it should not be omitted
+goes against the idea of \luaformatters. But it should not be omitted
 that it is perfectly \emph{possible} to prepare a complete configuration table
 and pass it to the factory function with the sole purpose of converting it to a
-\luavar{TemplatesTable} instance. In fact it is possible to finish the
+\luavar{FormattersTable} instance. In fact it is possible to finish the
 configuration file with something like
 
 \begin{minted}{lua}
-return lua_templates:new(MANUAL)
+return lua_formatters:new(MANUAL)
 \end{minted}
 
 \noindent in which case a manually composed table \luavar{MANUAL} would only at
-the last moment be converted to a \luavar{TemplatesTable}.  This is perfectly
+the last moment be converted to a \luavar{FormattersTable}.  This is perfectly
 valid, but the syntactic sugar helping the maintenance of the table is not
 available that way.
 
@@ -885,15 +885,15 @@ available that way.
 \subsection{Registering the Client}
 \label{sec:usage-registering-the-client}
 
-As was briefly mentioned in the introduction the \term{Template Table} has to be registered as a \term{Client} to the \term{Templates Library}.  At that point all the declared formatters are processed and the \LaTeX\ macros created.  The “canonical” way of doing this is to have the configuration file return the \luavar{TemplatesTable} instance and passing that file's name/path  to the \LaTeX\ macro \mintinline{tex}{\addLuaTemplates{<filename>}}.
+As was briefly mentioned in the introduction the \term{Template Table} has to be registered as a \term{Client} to the \term{Formatters Library}.  At that point all the declared formatters are processed and the \LaTeX\ macros created.  The “canonical” way of doing this is to have the configuration file return the \luavar{FormattersTable} instance and passing that file's name/path  to the \LaTeX\ macro \mintinline{tex}{\addLuaFormatters{<filename>}}.
 
 But the same can acutally be achieved while staying in the Lua domain.
-Internally the \LaTeX\ macro calls \luavar{lua\_templates:add()}, and this can
+Internally the \LaTeX\ macro calls \luavar{lua\_formatters:add()}, and this can
 equally be done explicitly from the Lua file.  Assuming \luavar{MANUAL} being a
-valid \luavar{TemplatesTable} instance
+valid \luavar{FormattersTable} instance
 
 \begin{minted}{lua}
-lua_templates:add(MANUAL)
+lua_formatters:add(MANUAL)
 \end{minted}
 
 \noindent at the end of the file would also register the \luavar{MANUAL} table
@@ -914,7 +914,7 @@ through \emph{writing} the \LaTeX\ invocation back).
 
 Formatters are \emph{declared} (or \emph{added}) by storing a \term{Formatter
 Entry} (\vref{sec:usage:formatter-entries}) somewhere in the hierarchy of the
-\term{Templates Table}'s \luavar{formatter} subtable.
+\term{Formatters Table}'s \luavar{formatter} subtable.
 
 \begin{minted}{lua}
 MANUAL = {
@@ -925,7 +925,7 @@ MANUAL = {
 }
 \end{minted}
 
-\noindent While this can be done manually \luatemplates\ provides two methods to
+\noindent While this can be done manually \luaformatters\ provides two methods to
 simplify the process and to improve readability of the configuration files:
 \mintinline{lua}{add_formatter(key, formatter)} and
 \mintinline{lua}{add_formatters(...)}.  For details about writing formatters
@@ -981,7 +981,7 @@ MANUAL:add_formatters('Composers', 'music.composers, '{
 
 \paragraph{Standalone function declaration}
 
-\emph{Functions} can be added through the two methods described above as well, but often it is more practical to use the regular “standalone” syntax to define them.  It is possible to add functions in the \luavar{formatters} subtable of the \term{Templates Table}:
+\emph{Functions} can be added through the two methods described above as well, but often it is more practical to use the regular “standalone” syntax to define them.  It is possible to add functions in the \luavar{formatters} subtable of the \term{Formatters Table}:
 
 \begin{minted}{lua}
 function MANUAL.formatters.music.composers:abbr_name(text)
@@ -1003,7 +1003,7 @@ only available for use within the current client, and that they are never
 accessible to \LaTeX\ macros.
 
 Local formatters are added with the functions
-\luavar{lua\_templates:add\_local\_formatter()} and \luavar{lua\_templates:add\_local\_formatters()}
+\luavar{lua\_formatters:add\_local\_formatter()} and \luavar{lua\_formatters:add\_local\_formatters()}
 that apart from registering the formatters to a different storage location
 behave identically to the functions described in the previous section.
 
@@ -1016,7 +1016,7 @@ the namespace is identical to regular formatters.
 \subsubsection{Formatter Entries}
 \label{sec:usage:formatter-entries}
 
-Each leaf in the \luavar{formatters} subtable of the \term{Templates Table}
+Each leaf in the \luavar{formatters} subtable of the \term{Formatters Table}
 holds the declaration of one \term{Formatter}, a \term{Formatter Entry}.  This
 can be coded as:
 
@@ -1222,7 +1222,7 @@ MANUAL:add_configuration{
 comment to its configuration.  Note the way the key is specified in the second
 example.  This entry looks up a formatter at \luavar{nested.key}, but this isn't
 actually real Lua but rather “Lua-style” syntax that is parsed internally by
-\luatemplates, not by the Lua parser.  Therefore, if the \luavar{key} contains
+\luaformatters, not by the Lua parser.  Therefore, if the \luavar{key} contains
 dots it has to be given using this special Lua syntax.  The third entry
 demonstrates a shorthand notation: if the value of an entry is not a table but a
 string, this is considered to be the new \luavar{name} property, so essentially
@@ -1244,11 +1244,11 @@ without requiring any code in the \LaTeX\ domain for the set-up.
 
 If the \term{Formatter Entry Table} includes the \luavar{name} field its value
 is used literally as the macro name, otherwise the macro name is generated from
-the formatter's \emph{position} in the \term{Templates Table} according to the
+the formatter's \emph{position} in the \term{Formatters Table} according to the
 following rules:
 
 \begin{itemize*}
-\item If the \term{Templates Table} has a \luavar{prefix} field this is
+\item If the \term{Formatters Table} has a \luavar{prefix} field this is
 prepended to the generated name.
 \item The Lua-style dot-notation is concatenated to a mixedCase string,
 removing all dots and making the following character uppercase.  If
@@ -1266,7 +1266,7 @@ MANUAL:add_formatters('Naming examples', 'media.cds', {
 \end{minted}
 
 \noindent will create macros \cmd{mediaCdsTitle} and \cmd{mediaCdsTitleShort}.
-If a prefix \texttt{'lib'} were defined in the \term{Templates Table} they would
+If a prefix \texttt{'lib'} were defined in the \term{Formatters Table} they would
 instead be \cmd{libMediaCdsTitle} and \cmd{libMediaCdsTitleShort}.
 
 \begin{minted}{lua}
@@ -1392,14 +1392,14 @@ The optional argument can automatically be validated in formatter
 
 In addition to completing the information for registered formatters
 (\vref{sec:usage:configuring-formatters}) \mintinline{lua}{add_configuration()} can
-also be used to “publish” hidden formatters to create \LaTeX\ macros
+also be used to “publish hidden formatters to create \LaTeX\ macros
 nevertheless.  While it doesn't make any sense to declare formatters as hidden
 only to publish them afterwards \emph{within one package} there are valid use
 cases where one package defines hidden formatters to be on the one hand useful
 building blocks accessible to Lua functions and on the other hand to be
 selectively publishable by \emph{other} packages.  The most prominent example of
 this is a collection of \term{Built-in Formatters} defined by
-\luatemplates\ itself, which is documented in
+\luaformatters\ itself, which is documented in
 \vref{sec:defining:builtin-formatters}.
 
 Publishing hidden formatters essentially involves renaming them to non-hidden names, so the typical way of doing it is to simply assign a new name to a function previously hidden through an underscore:
@@ -1422,25 +1422,25 @@ configuration in such cases.
 \section{Defining Formatters}
 \label{sec:defining-formatters}
 
-The core of working with \luatemplates\ is the definition of
+The core of working with \luaformatters\ is the definition of
 \term[Formatter]{Formatters}.  As has already been discussed a \term{Formatter}
 is either a string template or a Lua function that is wrapped in a
 \term{Formatter Entry Table} and stored in the \luavar{formatters} subtable of a
-\term{Templates Table}, from where eventually a \LaTeX\ macro will be created.
+\term{Formatters Table}, from where eventually a \LaTeX\ macro will be created.
 From the perspective of client code \emph{using} the formatter -- be it a
 \LaTeX\ macro or a Lua function -- there's no difference between templates and
-macros: both are called through \mintinline{lua}{lua_templates:format('key',
-<args>)}.  This transparency is an important feature of \luatemplates
+macros: both are called through \mintinline{lua}{lua_formatters:format('key',
+<args>)}.  This transparency is an important feature of \luaformatters
 as it makes it easy to change the implementation of a formatter from template to
 function and vice versa.
 
 This chapter discusses the various types of formatters and gives a basic introduction into writing \term{Formatter} \emph{functions}.
 
 
-\subsection{Templates}
+\subsection{Formatters}
 \label{sec:templates}
 
-\emph{Templates} in \luatemplates\ are text strings with zero to nine
+\emph{Formatters} in \luaformatters\ are text strings with zero to nine
 \emph{different} replacement fields (corresponding to the number of possible
 macro arguments in \LaTeX), while the \emph{same} field can be used multiple
 times within a template.  Upon usage the fields are replaced with content from
@@ -1453,7 +1453,7 @@ handled identically.
 \subsubsection{Argument Handling}
 \label{sec:templates-argument-handling}
 
-\luatemplates\ tries to infer arguments from formatters as much as
+\luaformatters\ tries to infer arguments from formatters as much as
 possible to simplify their declarations.  However, with \emph{templates} it is
 not always possible to fully automate the process, which is detailed in the
 following subsections.
@@ -1567,10 +1567,10 @@ following forces the height to 1\,\emph{em}:
 GIMP, \url{https://commons.wikimedia.org/w/index.php?curid=80930}}
 
 
-\subsubsection{Templates}
+\subsubsection{Formatters}
 \label{sec:templates-templates}
 
-\emph{templates} in \luatemplates's terminology are template strings
+\emph{templates} in \luaformatters's terminology are template strings
 with more than one mandatory replacement field.  In order to create \LaTeX\
 macros for such templates it is necessary to provide an array with argument
 names in the formatter entry table's \luavar{args} field (a failure to do so
@@ -1647,11 +1647,11 @@ content or within another, calling, Lua function.
 \noindent Note that the formatter \emph{is given} some data and expected to
 \emph{return} that processed string, but \emph{writing back to \LaTeX} is
 \emph{not} its responsibility.  This is transparently taken care of by the
-\luatemplates\ machinery, which at that stage also controls the optional
+\luaformatters\ machinery, which at that stage also controls the optional
 coloring.
 
 During the set-up process a formatter function is to some extent modified by
-\luatemplates\ and wrapped in an instance of the \luavar{Formatter}
+\luaformatters\ and wrapped in an instance of the \luavar{Formatter}
 class (although that is very similar to a \term{Formatter Entry Table}). At this
 point this is just an aside, and \vref{sec:advanced-programming} will go into
 much more detail.  For simple, self-contained formatter functions  -- and this
@@ -1703,16 +1703,16 @@ MANUAL.formatters.my = {
 }
 \end{minted}
 
-\noindent or -- of course preferably -- the \luatemplates\ function
+\noindent or -- of course preferably -- the \luaformatters\ function
 
 \begin{minted}{lua}
 MANUAL:provide_namespace('my.personal.commands')
 \end{minted}
 
 \noindent This limitation can't be avoided by the \luavar{strict=false} option
-of \luatemplates.  A typical workaround (or rather: situation that
+of \luaformatters.  A typical workaround (or rather: situation that
 takes the problem away by itself) is to first specify the \emph{templates} using
-the tools provided by \luatemplates\ and only then -- having created the
+the tools provided by \luaformatters\ and only then -- having created the
 namespace already -- define the \emph{functions}, which typically reside in the
 same namespace.
 
@@ -1720,11 +1720,11 @@ same namespace.
 
 It has also to be considered that the standalone function definition does \emph{not} allow the declaration of a \term{Formatter Entry Table}.  So if any element out of coloring, (self-documentation) comment, or alternative macro name is required this has to be added separately in a configuration clause (\vref{sec:usage:configuring-formatters}).  It is up to the package author to decide which form of entry is more convenient and maintainable; of course it should be applied consistently within a package.
 
-\paragraph{\luatemplates\ Interface}
+\paragraph{\luaformatters\ Interface}
 
-\luatemplates\ provides two functions that can equally be used to define
-formatter functions: \mintinline{lua}{TemplatesTable:add_formatter()} and
-\mintinline{lua}{TemplatesTable:add_formatters()}.  However, this has some
+\luaformatters\ provides two functions that can equally be used to define
+formatter functions: \mintinline{lua}{FormattersTable:add_formatter()} and
+\mintinline{lua}{FormattersTable:add_formatters()}.  However, this has some
 specifics to be taken care of:
 
 \begin{minted}{lua}
@@ -1748,7 +1748,7 @@ function definition happens as a value assignment within a table constructor and
 should therefore be followed by a comma to separate it from any following table
 fields -- failing to provide that is an easy-to-occur and hard-to-spot omission.
 
-Finally it should be mentioned that -- as these \luatemplates\ functions assign
+Finally it should be mentioned that -- as these \luaformatters\ functions assign
 a function to a variable it is also possible to assign a function that has
 previously been defined, for example as a local function, which would also give
 access to create closures (as demonstrated in the example
@@ -1768,7 +1768,7 @@ conditionally returned by a local “chooser” function.  Note that here the
 
 \paragraph{Alternative function definition}
 
-Finally it should be mentioned briefly that formatter functions can -- along with templates -- also be defined directly inside the table constructor of the table that will be passed to \luavar{lua\_templates:new()}:
+Finally it should be mentioned briefly that formatter functions can -- along with templates -- also be defined directly inside the table constructor of the table that will be passed to \luavar{lua\_formatters:new()}:
 
 
 \begin{minted}{lua}
@@ -1831,7 +1831,7 @@ even if they don't make use of it.  When the formatter is called from a \LaTeX\
 macro this variable will refer to the \luavar{Formatter} object the function is
 wrapped in (\vref{sec:advanced:the-formatter-table}), and when called from a Lua
 function through \mintinline{lua}{self:format()} this is also the case. However,
-due to some metatable handling by \luatemplates\ there are further methods and
+due to some metatable handling by \luaformatters\ there are further methods and
 variables that can be accessed directly through \luavar{self.} or
 \luavar{self:}.  For basic formatter programming as discussed in the current
 chapter the main functionality of interest are the built-in support functions
@@ -1844,7 +1844,7 @@ described in \vref{sec:advanced:modular-design-principles}.
 
 Named arguments specified in a formatter function's signature are automatically
 mapped to \LaTeX\ macro arguments, it is not necessary to separately declare
-them to \luatemplates\ or take care of their order: a function with the
+them to \luaformatters\ or take care of their order: a function with the
 signature \mintinline{lua}{function foo(text, key, fancy)} will generate the
 macro \mintinline{tex}{\foo{text}{key}{fancy}}.  Any \luavar{args} field that
 might be provided in a \term{Formatter Entry Table} will simply be ignored.
@@ -1987,7 +1987,7 @@ skip the validation described in the next section.
 The \package{lyluatextools} package this option handling is built upon also
 provides functionality to \emph{validate} options and optional arguments, both
 with regard to “known options” and to expected option types or values.
-\package{luatemplates} can make this validation available to formatter
+\luaformatters\ can make this validation available to formatter
 functions, simply by adding a \term{Option Declaration} to the formatter's
 \term{Formatter Entry Table} (since functions will often be defined “standalone“ this will typically take place in a separate configuration step.)
 
@@ -2019,7 +2019,7 @@ decided what will happen with that package.
 \subsubsection{Built-in Formatters}
 \label{sec:defining:builtin-formatters}
 
-\luatemplates\ implements a substantial number of \term[Built-in
+\luaformatters\ implements a substantial number of \term[Built-in
 Formatter]{Built-in Formatters} that can be used from everywhere in the Lua
 code, especially from within custom formatting functions, providing an easy way
 to modularize the development of formatters.  A \term{Built-in Formatter} can be
@@ -2034,7 +2034,7 @@ didn't seem like a good idea to create macros for them by default, therefore
 they are defined to be initially hidden.  But as described in
 \vref{sec:usage:publishing-builtin-formatters} they can be selectively exposed
 to \LaTeX\ with their original or arbitrary names.  Additional useful support
-functions defined by \luatemplates\ but not intended to be published as \LaTeX\
+functions defined by \luaformatters\ but not intended to be published as \LaTeX\
 macros are documented in \vref{sec:defining:support-functions}.
 
 The following example works with the built-in formatter \luavar{range}'s return value:
@@ -2070,7 +2070,7 @@ Add a sub/superscript.
 \item \luavar{sub/super}: The text to be added.\\If this is empty the original
 \luavar{base} is returned.
 \item \luavar{parenthesis}: If a true value add parentheses around the added text%
-\footnote{See \url{https://github.com/uliska/luatemplates/issues/16}}
+\footnote{See \url{https://github.com/uliska/luaformatters/issues/16}}
 \end{itemize*}
 
 
@@ -2111,7 +2111,7 @@ implemented strategies:
 \end{itemize*}
 
 \noindent More case strategies may be added, see
-\url{https://github.com/uliska/luatemplates/issues/2}.
+\url{https://github.com/uliska/luaformatters/issues/2}.
 
 \paragraph{\luavar{emph} (text)}
 
@@ -2142,7 +2142,7 @@ be used at will.
 the \luavar{bold} formatter: \names[formatter=bold]{Haydn and Mozart and
 Beethoven}.%
 \footnote{This is still affected by
-\url{https://github.com/uliska/luatemplates/issues/5}, suppressing the spaces.}
+\url{https://github.com/uliska/luaformatters/issues/5}, suppressing the spaces.}
 
 
 
@@ -2155,7 +2155,7 @@ as the separators. These can be overridden  by the options \luavar{separator}
 and \luavar{last\_separator}.
 
 It is planned to add \package{biblatex}-style list compression too (see
-\url{https://github.com/uliska/luatemplates/issues/4}).
+\url{https://github.com/uliska/luaformatters/issues/4}).
 
 \paragraph{\luavar{number} (text, options)}
 
@@ -2200,7 +2200,7 @@ list field:
 \subsubsection{Support Functions}
 \label{sec:defining:support-functions}
 
-The \luavar{Templates} class provides a number of useful helper functions that
+The \luavar{Formatters} class provides a number of useful helper functions that
 can be used in formatters to perform common tasks and make programming macros a
 bit easier.  In a way they are similar to the \term[Built-in Formatter]{Built-in
 Formatters} (\vref{sec:defining:builtin-formatters}), but they are not accessed using the
@@ -2297,7 +2297,7 @@ and \luavar{-4}. For strings that might include more than two segments
 \luavar{split\_list()} would be available.
 
 Note that the separator is not configurable yet but still hardcoded to be a
-single hyphen (\url{https://github.com/uliska/luatemplates/issues/18}).
+single hyphen (\url{https://github.com/uliska/luaformatters/issues/18}).
 
 \begin{minted}{lua}
 self:split_range('6-8')
@@ -2376,7 +2376,7 @@ Write some text to \LaTeX.
 
 This is a convenience function to write a string to \LaTeX, without worrying
 whether it is a long or other multiline string.  This is used from
-\luavar{Templates:\_write} and should generally not be used by package code.
+\luavar{Formatters:\_write} and should generally not be used by package code.
 
 
 \section{Advanced Formatter Programming}
@@ -2391,18 +2391,18 @@ The remainder of this manual consists (at this point) of bullet lists and raw ma
 \subsection{The \LaTeX\ Macro Lifecycle}
 \label{sec:latex-macro-lifecycle}
 
-Maybe the core functionality of the \package{luatemplates} package is the
+Maybe the core functionality of the \luaformatters\ package is the
 automatic creation of \LaTeX\ macros from defined \term[Formatter]{Formatters}.
 And while this should generally be quite intuitive there may at some point arise
 the desire or the need to know in more detail what happens to the formatters,
 and when which information is present and what action is taken.
 
-In the \term{Templates Table} the package author defines, declares and
+In the \term{Formatters Table} the package author defines, declares and
 configures \term[Formatter]{Formatters}, but at that point \LaTeX\ macros are
 not yet created. Instead \term[Formatter Entry]{Formatter Entries} are prepared
-in the \luavar{TemplatesTable}'s subtable \luavar{formatters}.  These are
-processed when the \term{Templates Table} is added to the library using
-\cmd{addLuaTemplates} from \LaTeX\ or \mintinline{lua}{lua_templates:add()} from
+in the \luavar{FormattersTable}'s subtable \luavar{formatters}.  These are
+processed when the \term{Formatters Table} is added to the library using
+\cmd{addLuaFormatters} from \LaTeX\ or \mintinline{lua}{lua_formatters:add()} from
 within a Lua file.  At that point the formatter \emph{entries} are converted to
 actual \luavar{Formatter} \emph{objects} (see
 \vref{sec:advanced:the-formatter-class}), and \LaTeX\ macros are created.
@@ -2410,7 +2410,7 @@ actual \luavar{Formatter} \emph{objects} (see
 The form of the macros may be surprising since it does not at all resemble the
 macros shown throughout this manual (e.g. \luaMacroDocInline{image}).  The
 \LaTeX\ macro does not perform any of the work it is supposed to do by itself,
-instead it invokes the function \mintinline{lua}{lua_templates:write({
+instead it invokes the function \mintinline{lua}{lua_formatters:write({
 <formatter>, <color> }, <arguments>)}, which will \emph{then} perform the actual
 work.  It will locate the correct \term{Formatter}, call its \luavar{apply()}
 method with the correctly mapped arguments, take the result string and
@@ -2419,7 +2419,7 @@ optionally wrap it in a \cmd{textcolor} macro.  The \emph{actual} macro for the 
 \begin{minted}{tex}
 \newcommand{\image}[2][width=2cm]{%
   \directlua{
-    lua_templates:write(
+    lua_formatters:write(
       { 'image', 'nocolor' },
       {
         options = "\luatexluaescapestring{\unexpanded{#1}}",
@@ -2438,15 +2438,15 @@ macro is \emph{invoked}, not at some earlier point, e.g. when it is
 \emph{created}.  This means that the formatter has access to the environment at
 the time of invocation, which corresponds to regular macro expansion.
 \item The resulting string may include macro calls, both standard ones like
-\cmd{emph} \emph{and} macros defined through \package{luatemplates}.  These are
+\cmd{emph} \emph{and} macros defined through \luaformatters\.  These are
 written back to the \LaTeX\ document where they will be parsed \emph{next},
-possibly invoking the next \package{luatemplates} formatter.
+possibly invoking the next \luaformatters\ formatter.
 \item This may or may not influence the behaviour with regard to “fragile“
 commands.  Generally, if the formatter is able to “serialize” the data to
 regular \LaTeX\ code it may be more robust than regular coding, but of course
 when it comes to issues like inserting footnotes in floating environments there
 is nothing to be gained from this approach.
-\item A \package{luatemplates} macro must not include itself in the code
+\item A \luaformatters\ macro must not include itself in the code
 written back to \LaTeX\ in order to avoid loops, but of course this is not
 possible with regular macro expansion either.
 \end{itemize*}
@@ -2456,7 +2456,7 @@ possible with regular macro expansion either.
 \label{sec:advanced:tables-and-objects}
 
 In general it is not necessary to know the implementation details of
-\package{luatemplates} to be able to use it, and even for more advanced
+\luaformatters\ to be able to use it, and even for more advanced
 techniques the tools described so far should be sufficient to work with the
 package.  However, since some of the more fancy functionality is achieved
 through non-obvious metatable machinery it seems necessary to provide explicit
@@ -2473,9 +2473,9 @@ This is the overall table structure:
 \medskip
 
 \dirtree{%
-.1 'lua\_templates' (Templates object).
-.2 \_clients (table of TemplatesTable objects).
-.3 'builtins' (TemplatesTable object).
+.1 'lua\_formatters' (Formatters object).
+.2 \_clients (table of FormattersTable objects).
+.3 'builtins' (FormattersTable object).
 .3 {...} (other clients).
 .2 \_formatters (table of tables).
 .3 'builtins' (table).
@@ -2488,7 +2488,7 @@ This is the overall table structure:
 \bigskip
 
 \dirtree{%
-.1 client (TemplatesTables object).
+.1 client (FormattersTables object).
 .2 {...} (properties).
 .2 formatters (table).
 .2 configuration (table).
@@ -2503,37 +2503,37 @@ This is the overall table structure:
 }
 
 
-\subsubsection{The \luavar{lua\_templates} Object}
+\subsubsection{The \luavar{lua\_formatters} Object}
 \label{sec:advanced:the-lua-templates-object}
 
-Upon loading of the \package{luatemplates} package one \luavar{Templates} table
-is created and made available as the global variable \luavar{lua\_templates}.
-This will become the \term{Templates Library} holding all registered
+Upon loading of the \luaformatters\ package one \luavar{Formatters} table
+is created and made available as the global variable \luavar{lua\_formatters}.
+This will become the \term{Formatters Library} holding all registered
 \term[Client]{Clients} and being called from the generated macros.  It also
 provides the library handling functionality documented elsewhere:
 
 \begin{itemize*}
-\item \luavar{Templates:new} -- create a new \luavar{TemplatesTable} (client) instance
-\item \luavar{Templates:add} -- register a new client to the library
-\item \luavar{Templates:format} -- apply a registered formatter
-\item \luavar{Templates:formatter} -- locate a registered formatter (from any client)
-\item \luavar{Templates:write} -- apply a formatter and write the result to \LaTeX
+\item \luavar{Formatters:new} -- create a new \luavar{FormattersTable} (client) instance
+\item \luavar{Formatters:add} -- register a new client to the library
+\item \luavar{Formatters:format} -- apply a registered formatter
+\item \luavar{Formatters:formatter} -- locate a registered formatter (from any client)
+\item \luavar{Formatters:write} -- apply a formatter and write the result to \LaTeX
 \end{itemize*}
 
 \noindent In addition to these the support functions that are described in
 \vref{sec:defining:support-functions} and defined in the submodule
-\luavar{submodules/luatemplates-support.lua} are referenced to become fields of
-the \luavar{Templates} table.
+\luavar{submodules/luaformatters-support.lua} are referenced to become fields of
+the \luavar{Formatters} table.
 
-\luavar{lua\_templates} holds two corresponding \emph{stacks} --
+\luavar{lua\_formatters} holds two corresponding \emph{stacks} --
 \luavar{\_clients} and \luavar{\_formatters} -- that are handled in LIFO order:
 when looking up a formatter the clients are searched in reverse order of
-addition.  Whenever a client is added through \luavar{lua\_templates:add()}
+addition.  Whenever a client is added through \luavar{lua\_formatters:add()}
 entries are added to both stacks.
-The \luavar{\_clients} subtable holds objects of the \luavar{TemplatesTable}
+The \luavar{\_clients} subtable holds objects of the \luavar{FormattersTable}
 class (\vref{sec:advanced:templates-table}) that have been created in
 packages/documents and are added as \term[Client]{Clients} to the
-\term{Templates Library}.  The entry in the \luavar{\_formatters} subtable is
+\term{Formatters Library}.  The entry in the \luavar{\_formatters} subtable is
 populated automatically upon the addition of a client, and it will hold a flat
 list whose keys are virtual paths (strings in Lua-style dot-notation) to which
 \luavar{Formatter} objects (\vref{sec:advanced:the-formatter-class}) are
@@ -2541,7 +2541,7 @@ assigned.  These \luavar{Formatter} objects too are created implicitly while the
 client is being added to the library.  A hyphothetical \luavar{\_formatters} table might look like this:
 
 \begin{minted}{lua}
-lua_templates = {
+lua_formatters = {
 	_clients = {
 		['my-package'] = {
 			['foo'] = <Formatter object for \foo>,
@@ -2553,24 +2553,24 @@ lua_templates = {
 
 \noindent In this reference list formatters are stored by their (potentially
 nested) \emph{keys} referring to their position in the original
-\luavar{TemplatesTable} instance.  Additionally each formatter stores its macro
+\luavar{FormattersTable} instance.  Additionally each formatter stores its macro
 name, which often differs from the key, and upon formatter lookup both the key
 and the internal name are considered.
 
 
 
-\subsubsection{\luavar{TemplatesTable} -- The Client}
+\subsubsection{\luavar{FormattersTable} -- The Client}
 \label{sec:advanced:templates-table}
 
-The \luavar{TemplatesTable} class is the basic entity a package author is
-confronted with: one \term{Client} is defined within one \term{Templates Table},
-instantiated with \mintinline{lua}{lua_templates:new(<name>)} (or a table as
+The \luavar{FormattersTable} class is the basic entity a package author is
+confronted with: one \term{Client} is defined within one \term{Formatters Table},
+instantiated with \mintinline{lua}{lua_formatters:new(<name>)} (or a table as
 argument).  It can be given a few properties (see
 \vref{sec:usage:templates-table}), and the \luavar{formatters} (mandatory) and
 \luavar{configuration} (optional) subtables have to be populated with formatter
 declarations.
 
-Toplevel functions and fields created in a \luavar{TemplatesTable} are sort-of
+Toplevel functions and fields created in a \luavar{FormattersTable} are sort-of
 private to the client, as they can be accessed from a formatter using the
 \luavar{self:} notation but not (easily) from any other code.
 
@@ -2600,7 +2600,7 @@ dot-notation strings, and it is populated using the methods described in
 \vref{sec:usage:configuring-formatters}.
 
 
-\subsubsection{Functions of the \luavar{TemplatesTable} Class}
+\subsubsection{Functions of the \luavar{FormattersTable} Class}
 \label{sec:advanced:templates-table-functions}
 
 \NOTE{TBD}
@@ -2614,7 +2614,7 @@ instances of the \luavar{Formatter} class, and some knowledge about this class
 is relevant for creating all but very simple formatters.
 
 The formatter has a number of properties that have partially been provided in
-the \term{Templates Table} and partially inferred from various sources.  The
+the \term{Formatters Table} and partially inferred from various sources.  The
 properties are stored in private fields whose names start with underscores, but
 there are accessor methods that should be used when querying the properties
 (because some of the properties are only generated and cached upon first
@@ -2627,13 +2627,13 @@ function can access:
 \begin{itemize*}
 \item The “parent” table (the \term{Client} that has created this formatter)
 (through \luavar{self:})
-\item \luavar{lua\_templates} (and through this the support functions) (through
+\item \luavar{lua\_formatters} (and through this the support functions) (through
 \luavar{self:})
 \item Local formatters (through \luavar{self:\_format()})
 \item Global formatters (through \luavar{self:format()})
 \end{itemize*}
 
-Access to the \luavar{TemplatesTable} object is described in
+Access to the \luavar{FormattersTable} object is described in
 \vref{sec:advanced:templates-table-functions}, to (local and global) formatters
 in \vref{sec:advanced:modular-design-principles}.
 
@@ -2683,7 +2683,7 @@ Returns \luavar{true} if the \luavar{name()} property starts with an underscore.
 The \luavar{key} is the property by which a formatter is addressed and looked
 up.  It is a string value in Lua-style dot-notation that is determined
 automatically by the (nested) position the \term{Formatter Entry} had in the
-\term{Templates Table}.
+\term{Formatters Table}.
 
 \item \luavar{Formatter:macro()}\\
 Returns the generated \LaTeX\ macro for the formatter, or \luavar{nil} if it is
@@ -2700,7 +2700,7 @@ The \luavar{parent} of a formatter is the \term{Client} from which it has been
 created.  If a formatter is initially defined to be hidden by the client and
 later published by another client, the \luavar{parent} is still the original
 client.%
-\footnote{\NOTE{TODO:} \url{https://github.com/uliska/luatemplates/issues/34}}
+\footnote{\NOTE{TODO:} \url{https://github.com/uliska/luaformatters/issues/34}}
 
 \end{itemize*}
 
@@ -2717,9 +2717,9 @@ use.
 \paragraph{\luavar{Formatter:apply(...)}}
 \label{sec:advanced:formatter:apply}
 
-is the function that is implicitly called by \luavar{Templates:format()}.  It is
+is the function that is implicitly called by \luavar{Formatters:format()}.  It is
 possible to use this function too after having obtained a \luavar{Formatter}
-object through \luavar{Templates:formatter(key)}, but the canonical way of using
+object through \luavar{Formatters:formatter(key)}, but the canonical way of using
 another formatter is \luavar{self:format(key, ...)}.  If the internal formatter
 is a function then the \luavar{...} arguments are simply passed on to the
 function's argument list, in case of a string templates it is more complex: The
@@ -2791,7 +2791,7 @@ details.
 
 This command should be considered a \emph{class function} of the
 \luavar{Formatter} class because any actual \luavar{Formatter} object is by
-definition a formatter.  It is used by \luatemplates\ while iterating over a new
+definition a formatter.  It is used by \luaformatters\ while iterating over a new
 client to discern between formatter entries and tree nodes.  The function
 returns \texttt{true} if the given object appears to be a correct
 \term{Formatter Entry Table} -- or, of course, if it is an actual
@@ -2812,16 +2812,16 @@ any further action that might be necessary after modifying an existing
 \subsection{Modular Design Principles}
 \label{sec:advanced:modular-design-principles}
 
-One of the goals of \luatemplates\ is encouraging and simplifying the reuse of
+One of the goals of \luaformatters\ is encouraging and simplifying the reuse of
 code while developing macro libraries.  This section aims at giving an overview
 of the available techniques that can be used to benefit from the package's
 provisions.
 
 
-\subsubsection{Acessing \luavar{lua\_templates} Fields}
+\subsubsection{Acessing \luavar{lua\_formatters} Fields}
 \label{sec:advanced:modular:lua-templates-fields}
 
-The main table \luavar{lua\_templates} (and through it, the support functions)
+The main table \luavar{lua\_formatters} (and through it, the support functions)
 provides some general functionality useful in formatter programming, most
 notably the \luavar{format()} function and probably the \luavar{wrap\_XXX()}
 functions (\vref{sec:advanced:the-lua-templates-object}).  All these can be
@@ -2832,7 +2832,7 @@ directly accessed from within a formatter using the \luavar{self:} notation.
 \label{sec:advanced:modular:parent-table}
 
 A formatter can access fields of its “parent” \term{Client}'s
-\luavar{TemplatesTable} object that are not publicly exposed as formatters and
+\luavar{FormattersTable} object that are not publicly exposed as formatters and
 can be considered private to the \term{Client}. So this is the place to
 implement helper functionality that is required by the actual formatters but not
 intended to be shared by other code.  This somewhat competes with the concept of
@@ -2860,7 +2860,7 @@ order of their client's addition to the library, so if there should be multiple
 formatters with the same lookup key, the one added last will shadow any other
 formatter.%
 \footnote{\NOTE{NOTE:} The behaviour for name clashes is not finally decided.
-See \url{https://github.com/uliska/luatemplates/issues/34}.}
+See \url{https://github.com/uliska/luaformatters/issues/34}.}
 
 Registered formatters are used using
 
@@ -2896,7 +2896,7 @@ another package but provide fallback functionality if that package isn't loaded.
 
 The example macro \luaMacroDocInline{Bar} (listing in
 \vref{sec:examples:using-formatters}) makes use of the formatter \luavar{foo}
-(defined in the \luavar{MANUAL} \luavar{TemplatesTable}) and also shows the
+(defined in the \luavar{MANUAL} \luavar{FormattersTable}) and also shows the
 safety check (even if that isn't necessary when the used formatter is
 \emph{known} to be available). The formatter iterates over the characters in the
 \luavar{text} argument and replaces each with the result of calling
@@ -2934,7 +2934,7 @@ the following entries are all printed consistently:
 \noindent This formatter makes use of a pretty common idiom: Formatting a one-argument string template with the result of a second (local) formatter:%
 \footnote{Since this is so common it is intended to provide some syntactic sugar
 to make it even more convenient to use
-(\url{https://github.com/uliska/luatemplates/issues/33}).}
+(\url{https://github.com/uliska/luaformatters/issues/33}).}
 
 \begin{minted}{lua}
 function LOCALS.formatters:dv(text)
@@ -2950,31 +2950,31 @@ end
 \label{sec:mwe}
 
 \noindent
-\texttt{luatemplates-mwe-templates.lua} and \texttt{luatemplates-mwe.tex}:
+\texttt{luaformatters-mwe-templates.lua} and \texttt{luaformatters-mwe.tex}:
 
-\inputminted{lua}{examples/luatemplates-mwe-templates.lua}
+\inputminted{lua}{examples/luaformatters-mwe-templates.lua}
 
 \hrule
 
-\inputminted{tex}{examples/luatemplates-mwe.tex}
+\inputminted{tex}{examples/luaformatters-mwe.tex}
 
-\directlua{os.execute('lualatex -jobname=examples/luatemplates-mwe examples/luatemplates-mwe.tex')}
+\directlua{os.execute('lualatex -jobname=examples/luaformatters-mwe examples/luaformatters-mwe.tex')}
 
-\includepdf{examples/luatemplates-mwe}
+\includepdf{examples/luaformatters-mwe}
 
 
 \subsection{A Sample Configuration File}
 \label{sec:examples:manual-templates}
 
 The following listing shows the working configuration file
-\texttt{luatemplates-manual-templates.lua} which is actually used for producing
+\texttt{luaformatters-manual-templates.lua} which is actually used for producing
 this manual. It is thoroughly commented and aims at being a concise but
 comprehensive demonstration of the available tools and options.  In order to
 achieve this goal it is obviously less cleanly structured than a real-world file
 would be, and it is planned to add further example files demonstrating
 particular techniques and approaches.
 
-\inputminted[firstline=11]{lua}{luatemplates-manual-templates.lua}
+\inputminted[firstline=11]{lua}{luaformatters-manual-templates.lua}
 
 \enlargethispage*{4\baselineskip}
 
@@ -2992,7 +2992,7 @@ The following file is copied from a real-world example to demonstrate a number o
 The following examples serve as demonstrations of specific techniques.  Some of
 them are taken from the functionality created for this manual and moved to
 separate files which are all added as \term[Client]{Clients} to the manual's
-\term{Templates Library}, while others are created separately and are accessible
+\term{Formatters Library}, while others are created separately and are accessible
 through corresponding \texttt{.tex} files in the \texttt{documentation/examples}
 subdirectory of the repository.
 
@@ -3014,15 +3014,15 @@ subdirectory of the repository.
 \subsubsection{Closures}
 \label{sec:examples:closures}
 
-This is in its essence not a \luatemplates\ demonstration but rather a Lua idiom, but it perfectly illustrates how the package makes it easy to exploit programming in a language like Lua.
+This is in its essence not a \luaformatters\ demonstration but rather a Lua idiom, but it perfectly illustrates how the package makes it easy to exploit programming in a language like Lua.
 
-The file \texttt{examples/closures.lua} is made available to \texttt{luatemplates.tex} by adding
+The file \texttt{examples/closures.lua} is made available to \texttt{luaformatters.tex} by adding
 
 \begin{minted}{tex}
-\addLuaTemplates{examples/closures.lua}
+\addLuaFormatters{examples/closures.lua}
 \end{minted}
 
-\noindent to the document preamble after loading the main \term{Templates
+\noindent to the document preamble after loading the main \term{Formatters
 Table}.  Basically this is done for all further examples.
 
 \inputminted{lua}{examples/closure.lua}

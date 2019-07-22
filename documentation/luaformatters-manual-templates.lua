@@ -1,5 +1,5 @@
 local err, warn, info, log = luatexbase.provides_module({
-    name               = "luatemplates-manual-templates",
+    name               = "luaformatters-manual-templates",
     version            = '0.8',
     date               = "2019/07/02",
     description        = "Lua module for templating, sample templates.",
@@ -9,15 +9,15 @@ local err, warn, info, log = luatexbase.provides_module({
 })
 
 --[[
-    Demo configuration file for the luatemplates package's MWE.
-    This module defines and returns one TemplatesTable and returns it
-    The returned table will then be passed to Templates:add()
+    Demo configuration file for the luaformatters package's MWE.
+    This module defines and returns one FormattersTable and returns it
+    The returned table will then be passed to Formatters:add()
     to automagically produce the full set of LaTeX commands.
 --]]
 
--- Create a new TemplatesTable instance by referencing the global
--- `lua_templates` variable
-local MANUAL = lua_templates:new('manual')
+-- Create a new FormattersTable instance by referencing the global
+-- `lua_formatters` variable
+local MANUAL = lua_formatters:new('manual')
 
 -- Add formatters, grouped by category.
 -- (Note that the first string does have no meaning, it's just a comment)
@@ -30,10 +30,10 @@ MANUAL:add_formatters('Shorthands', {
 
     --[[
         Note that a template (or function, for that matter) declared
-        by luatemplates may *use* other macros that have also been
-        produced by luatemplates:
+        by luaformatters may *use* other macros that have also been
+        produced by luaformatters:
     --]]
-    luatemplates = [[\package{luatemplates}]],
+    luaformatters = [[\package{luaformatters}]],
 
     --[[
         Resulting macro names must be possible.
@@ -83,7 +83,7 @@ MANUAL:add_formatters('Styles (templates with one mandatory argument)', {
         },
 })
 
-MANUAL:add_formatters('Templates (templates with more than one argument)', {
+MANUAL:add_formatters('Formatters (templates with more than one argument)', {
     --[[
         A template with multiple mandatory and one optional argument.
         The optional argument is indicated by an 'options' replacement

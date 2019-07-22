@@ -1,9 +1,9 @@
 --[[
-    Templates Table with the rest of functionality that is just *used*
+    Formatters Table with the rest of functionality that is just *used*
     in the manual but not specifically demonstrated as examples.
 --]]
 
-local ADDITIONALS = lua_templates:new('additionals')
+local ADDITIONALS = lua_formatters:new('additionals')
 
 ADDITIONALS.formatters = {
     argument = {

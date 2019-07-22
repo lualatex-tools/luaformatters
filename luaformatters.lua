@@ -1,5 +1,5 @@
 local err, warn, info, log = luatexbase.provides_module({
-    name               = "luatemplates",
+    name               = "luaformatters",
     version            = '0.8',
     date               = "2019/07/02",
     description        = "Lua module for templating.",
@@ -9,40 +9,40 @@ local err, warn, info, log = luatexbase.provides_module({
 })
 
 --[[
-    *Templates* is the main table that is also returned and will be
-    available as the global variable `lua_templates`.
+    *Formatters* is the main table that is also returned and will be
+    available as the global variable `lua_formatters`.
 
     Arbitrary numbers of “clients” can register template tables with
     formatters. The clients tables will be stored in
-    Templates._clients[<client_name>], and all available formatters will
-    be stored in Templates._formatters[<client_name>].
+    Formatters._clients[<client_name>], and all available formatters will
+    be stored in Formatters._formatters[<client_name>].
     The pseudo-client `builtin` will be registered in the first place,
     before any real client gets the chance.
 
-    Each client table will get Templates set as its metatable, so
+    Each client table will get Formatters set as its metatable, so
     any code in a client's toplevel table can use `self` to access fields
-    both from itself and from Templates.
+    both from itself and from Formatters.
 
     Each declared formatter will be wrapped in a Formatter object.
     Formatter's __index function will look for missing fields in the
-    Formatters table, in the “parent” client, in Templates, and in the
+    Formatters table, in the “parent” client, in Formatters, and in the
     “parent”'s formatters subtable.
 --]]
-local Templates = {
+local Formatters = {
     _formatters = {},
     _clients = {},
     _client_order_rev = {},
 }
-Templates.__index = Templates
+Formatters.__index = Formatters
 -- Has to be made available as global function already now
-_G['lua_templates'] = Templates
+_G['lua_formatters'] = Formatters
 
 -- Load supporting modules
-local Formatter = require('luatemplates-formatter')
-local TemplatesTable = require('luatemplates-templatestable')
--- load supporter functions and hook them into the Templates table.
-for k, v in pairs(require('luatemplates-support')) do
-    Templates[k] = v
+local Formatter = require('luaformatters-formatter')
+local FormattersTable = require('luaformatters-templatestable')
+-- load supporter functions and hook them into the Formatters table.
+for k, v in pairs(require('luaformatters-support')) do
+    Formatters[k] = v
 end
 
 
@@ -51,11 +51,11 @@ end
     within formatter functions.
 --]]
 
-function Templates:new(properties)
-    return TemplatesTable:new(properties)
+function Formatters:new(properties)
+    return FormattersTable:new(properties)
 end
 
-function Templates:add(client)
+function Formatters:add(client)
 --[[
     Register a new client.
     Store the complete client table in self._clients[name]
@@ -85,7 +85,7 @@ function Templates:add(client)
 end
 
 
-function Templates:format(key, ...)
+function Formatters:format(key, ...)
 --[[
     Format and return the given data using a formatter addressed by `key`.
     Produces an error if no formatter can be found for the key.
@@ -94,7 +94,7 @@ function Templates:format(key, ...)
     especially depends on whether the formatter is template-based or
     function-based.
     For a function the number of arguments must match the function's signature.
-    Templates typically receive a key=value replacement table, but for more
+    Formatters typically receive a key=value replacement table, but for more
     options please refer to the comments in Formatter:apply().
 --]]
     local formatter = self:formatter(key)
@@ -108,7 +108,7 @@ but no template/formatter found at key
     return formatter:apply(...)
 end
 
-function Templates:formatter(key)
+function Formatters:formatter(key)
 --[[
     Find a formatter matching the given key.
     key may be either an array with a client name and a key or only a key.
@@ -136,7 +136,7 @@ function Templates:formatter(key)
     end
 end
 
-function Templates:write(key_color, ...)
+function Formatters:write(key_color, ...)
 --[[
     Process some data using a formatter and write it to the TeX document.
     - key_color (string or table)
@@ -164,7 +164,7 @@ end
     Internal functions not intended for use by client code.
 --]]
 
-function Templates:_configure_formatter(client, key, properties)
+function Formatters:_configure_formatter(client, key, properties)
 --[[
     Apply manual configuration for a given item.
     - locate the formatter by the `key` field
@@ -191,7 +191,7 @@ No formatter found at key: %s]], key))
     end
 end
 
-function Templates:_configure_formatters(client)
+function Formatters:_configure_formatters(client)
 --[[
     Provide additional configuration to formatters or
     publish hidden formatters as LaTeX macros.
@@ -202,7 +202,7 @@ function Templates:_configure_formatters(client)
     end
 end
 
-function Templates:_create_macros(client)
+function Formatters:_create_macros(client)
 --[[
     Create the LaTeX macros from the non-hidden formatters in a client.
 --]]
@@ -215,7 +215,7 @@ function Templates:_create_macros(client)
     end
 end
 
-function Templates:_do_register_formatters(client, key, root, _local)
+function Formatters:_do_register_formatters(client, key, root, _local)
     --[[
         Recursively walk the client's `formatters` tree
         and register all the formatters in a flat table at
@@ -245,11 +245,11 @@ function Templates:_do_register_formatters(client, key, root, _local)
     end
 end
 
-function Templates:_register_formatters(client)
+function Formatters:_register_formatters(client)
 --[[
     Recursively visit all formatter entries in client,
     create Formatter objects from them and register them in
-    Templates's formatter table.
+    Formatters's formatter table.
 --]]
     if not self._formatters[client:name()] then
         self._formatters[client:name()] = {}
@@ -257,7 +257,7 @@ function Templates:_register_formatters(client)
     self:_do_register_formatters(client, '', client.formatters)
 end
 
-function Templates:_register_local_formatters(client)
+function Formatters:_register_local_formatters(client)
 --[[
     Recursively visit all local formatter entries in client,
     create Formatter objects from them and register as local formatters.
@@ -265,7 +265,7 @@ function Templates:_register_local_formatters(client)
     self:_do_register_formatters(client, '', client._local, true)
 end
 
-function Templates:_write(content, color)
+function Formatters:_write(content, color)
 --[[
     Write some content to the TeX document and optionally color it.
     Use a color when all of the following conditions are met:
@@ -273,8 +273,8 @@ function Templates:_write(content, color)
     * A color package has been loaded TODO: Not implemented yet
     * The given color is not 'nocolor'
 --]]
-    if template_opts.color and color ~= 'nocolor' then
-        if color == 'default' then color = template_opts['default-color'] end
+    if formatters_opts.color and color ~= 'nocolor' then
+        if color == 'default' then color = formatters_opts['default-color'] end
         content = self:wrap_macro('textcolor', color, content )
     end
     self:write_latex(content)
@@ -288,12 +288,12 @@ Ensure that a color package is loaded,
 otherwise require xcolor.
 --]]
 local function handle_dependencies()
-    if template_opts['self-documentation'] then
-        Templates:write_latex([[\RequirePackage{minted}
+    if formatters_opts['self-documentation'] then
+        Formatters:write_latex([[\RequirePackage{minted}
 ]])
-    elseif template_opts.color then
+    elseif formatters_opts.color then
         -- Only do this when minted hasn't been loaded before
-        Templates:write_latex([[
+        Formatters:write_latex([[
 \makeatletter
 \@ifpackageloaded{xcolor}{}
 {\@ifpackageloaded{color}{}{\RequirePackage{xcolor}}}
@@ -305,6 +305,6 @@ end
 handle_dependencies()
 
 -- Register the built-in formatters.
-Templates:add(require('luatemplates-builtins'))
+Formatters:add(require('luaformatters-builtins'))
 
-return Templates
+return Formatters

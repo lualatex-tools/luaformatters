@@ -18,7 +18,7 @@ local err, warn, info, log = luatexbase.provides_module({
 
 local lfs = require 'lfs'
 
-local SCHUBERT = lua_templates:new{
+local SCHUBERT = lua_formatters:new{
     name = 'diss',
     namespace = {
         'abb',
@@ -69,7 +69,7 @@ SCHUBERT:add_formatters('Styles', {
     zitat             = [[\emph{<<<text>>>}]],
 })
 
-SCHUBERT:add_formatters('Templates', {
+SCHUBERT:add_formatters('Formatters', {
     partref = {
         comment = 'Reference to a section in another bookpart',
         f       = [[\cref{<<<part>>>}, \vref{<<<reference>>>}]],
@@ -241,7 +241,7 @@ SCHUBERT:add_configuration{
 
 --[[
   Formatierungsfunktionen
-  NOTE: `self` verweist immer auf das `Templates`-Objekt,
+  NOTE: `self` verweist immer auf das `Formatters`-Objekt,
   nicht auf `Formatter`.
 --]]
 

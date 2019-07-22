@@ -1,8 +1,8 @@
 local err, warn, info, log = luatexbase.provides_module({
-    name               = "luatemplates.builtins",
+    name               = "luaformatters.builtins",
     version            = '0.8',
     date               = "2019/07/02",
-    description        = "luatemplates, built-in formatters.",
+    description        = "luaformatters, built-in formatters.",
     author             = "Urs Liska",
     copyright          = "2019- Urs Liska",
     license            = "GPL3",
@@ -12,7 +12,7 @@ local err, warn, info, log = luatexbase.provides_module({
     The *BUILTINS* table provides general formatters that can either be used
     from custom formatters in modular style or published as LaTeX macros during
     a client's configuration stage.
-    It may serve as an example of a luatemplates client file, but it includes
+    It may serve as an example of a luaformatters client file, but it includes
     a few pretty specific table tricks.
 --]]
 
@@ -20,7 +20,7 @@ local err, warn, info, log = luatexbase.provides_module({
     *Formatters*
     For better clarity in the source file a Formatters table is locally
     stored and later hooked into BUILTINS as BUILTINS.formatters.
-    Any code in Formatters will eventually be exposed to the Templates
+    Any code in Formatters will eventually be exposed to the Formatters
     formatter lookup, while code in BUILTINS is private to this module.
 
     All functions in the table will be wrapped in a formatter entry table,
@@ -33,7 +33,7 @@ local err, warn, info, log = luatexbase.provides_module({
 --]]
 local Formatters = {}
 
-local BUILTINS = lua_templates:new{
+local BUILTINS = lua_formatters:new{
     name = 'builtins',
     formatters = Formatters,
     docstrings = {}
@@ -88,7 +88,7 @@ Docstring requested, but no formatter found at key
     if options.demo then
         local separator = options.demosep
         if separator == 'default' then
-            separator = template_opts['demosep-inline']
+            separator = formatters_opts['demosep-inline']
         end
         result = result..string.format([[
 %s%s]], separator , docstring)
@@ -119,7 +119,7 @@ function Formatters:docstring_minted(key, options)
     if options.demo then
         local separator = options.demosep
         if options.demosep == 'default' then
-            separator = template_opts['demosep-minted']
+            separator = formatters_opts['demosep-minted']
         end
         result = result..string.format([[
 %s
@@ -200,7 +200,7 @@ function Formatters:add_element(base, element, separator)
     elseif element == '' then
         return base
     else
-        local sep = separator or template_opts['element-separator']
+        local sep = separator or formatters_opts['element-separator']
         if not separator then
             warn([[
 Bug:
@@ -277,7 +277,7 @@ function Formatters:list_format(text, options)
     - formatter
       If a formatter is given as an option every list element is passed to
       that (similar to the `map` construct in some programming languages).
-      formatter may be either a key (as passed to Templates:formatter()) or an
+      formatter may be either a key (as passed to Formatters:formatter()) or an
       actual function. The returned formatter must accept exactly one argument,
       so the registered 'styles' may be good formatters. Some of the built-in
       formatters are also suitable, maybe the most-used formatter is 'range'
@@ -297,8 +297,8 @@ function Formatters:list_format(text, options)
         end
     end
     return self:format('list_join', elements, {
-        separator = options.separator or template_opts['list-sep'],
-        last_sep = options.last_sep or template_opts['list-last-sep'],
+        separator = options.separator or formatters_opts['list-sep'],
+        last_sep = options.last_sep or formatters_opts['list-last-sep'],
     })
 end
 
@@ -377,10 +377,10 @@ function Formatters:range(text, options)
     if not to then return self:format(formatter, text, options)
     elseif to:sub(1, 1) == 'f' then
         local follow_key = 'range-'..to..'ollow'
-        local follow = options[follow_key] or template_opts[follow_key]
+        local follow = options[follow_key] or formatters_opts[follow_key]
         return self:format(formatter, from, options) .. follow
     else
-        local range_sep = options['range-sep'] or template_opts['range-sep']
+        local range_sep = options['range-sep'] or formatters_opts['range-sep']
         return self:format(formatter, from, options) .. range_sep .. self:format(formatter, to, options)
     end
 end
@@ -424,14 +424,14 @@ for k, v in pairs(Formatters) do
     }
 end
 
-if template_opts['self-documentation'] then
+if formatters_opts['self-documentation'] then
 --[[
     Configure the docstring formatters to create macros.
 --]]
     local opts = {
-        ['args'] = { 'default', lua_templates.is_str },
+        ['args'] = { 'default', lua_formatters.is_str },
         ['demo'] = { 'false', 'true', '' },
-        ['demosep'] = { 'default', lua_templates.is_str },
+        ['demosep'] = { 'default', lua_formatters.is_str },
         ['nocomment'] = { 'false', 'true', ''}
     }
     BUILTINS:add_configuration{
