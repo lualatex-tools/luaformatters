@@ -1217,7 +1217,7 @@ explicitly marked as hidden will trigger the creation of a corresponding macro,
 without requiring any code in the \LaTeX\ domain for the set-up.
 
 \subsubsection{Macro Names}
-\label{sec:usage-macro-names}
+\label{sec:usage:macro-names}
 
 If the \term{Formatter Entry Table} includes the \luavar{name} field its value
 is used literally as the macro name, otherwise the macro name is generated from
@@ -1881,10 +1881,10 @@ implemented in lyluatex-lib already.}
 In some cases it is necessary to treat the optional argument not as a
 \texttt{key=value} option list but as a single string, e.g. if the argument is
 just optionally providing a single value.  For these cases the processed
-\luavar{options} table contains the field \luavar{options.\_original} that can
-be used instead of the regular lookup keys.  If no optional argument has been
-given this field will contain an empty string.  See \vref{sec:examples:closures}
-for an example.
+\luavar{options} table contains original string in the field \luavar{options[1]}
+which can be used instead of the regular lookup keys.  If no optional argument
+has been given this field will contain an empty string.  See
+\vref{sec:examples:closures} for an example.
 
 \paragraph{Manual Option Processing}
 
@@ -2544,6 +2544,9 @@ argument).  It can be given a few properties (see
 \luavar{configuration} (optional) subtables have to be populated with formatter
 declarations.
 
+Toplevel functions and fields created in a \luavar{TemplatesTable} are sort-of
+private to the client, as they can be accessed from a formatter using the
+\luavar{self:} notation but not (easily) from any other code.
 
 \subsubsection{The \luavar{formatters} Table}
 \label{sec:advanced:the-formatter-table}
@@ -2571,28 +2574,216 @@ dot-notation strings, and it is populated using the methods described in
 \vref{sec:usage:configuring-formatters}.
 
 
+\subsubsection{Functions of the \luavar{TemplatesTable} Class}
+\label{sec:advanced:templates-table-functions}
+
+\NOTE{TBD}
+
 
 \subsection{The \luavar{Formatter} Class}
 \label{sec:advanced:the-formatter-class}
 
+When formatters are actually in \emph{use} they have been silently converted to
+instances of the \luavar{Formatter} class, and some knowledge about this class
+is relevant for creating all but very simple formatters.
 
-\subsection{Modular Design Principles}
-\label{sec:modular-design-principles}
+The formatter has a number of properties that have partially been provided in
+the \term{Templates Table} and partially inferred from various sources.  The
+properties are stored in private fields whose names start with underscores, but
+there are accessor methods that should be used when querying the properties
+(because some of the properties are only generated and cached upon first
+request).
 
-\medskip As formatters have this consistent behaviour of returning a processed
-string they can easily be used as building blocks to create a modular library of
-code snippets do avoid redundant implementation of formatting code: need an
-“n-th edition” superscript as part of various macros or consistent formatting of
-email addresses throughout various uses? simply factor them out in
-self-contained formatters.  \luatemplates\ also provides a number of
-built-in formatters for this purpose.  For example, wrapping a part of an
-element \mintinline{tex}{\emph{}} doesn't have to be coded manually but can be
-achieved with \mintinline{lua}{self:format('emph', my_emphasized_word)},
-encouraging modular creation of formatters and reducing redundant code.  See
-\vref{sec:builtin-formatters} for documentation of the available built-in
-formatters.
+These properties and the functions described below are accessible from a
+formatter function using the \luavar{self:} notation.  In addition a formatter
+function can access:
 
-\subsubsection{Reusing Code}
+\begin{itemize*}
+\item The “parent” table (the \term{Client} that has created this formatter)
+(through \luavar{self:})
+\item \luavar{lua\_templates} (and through this the support functions) (through
+\luavar{self:})
+\item Local formatters (through \luavar{self:\_format()})
+\item Global formatters (through \luavar{self:format()})
+\end{itemize*}
+
+Access to the \luavar{TemplatesTable} object is described in
+\vref{sec:advanced:templates-table-functions}, to (local and global) formatters
+in \vref{sec:advanced:modular-design-principles}.
+
+
+\subsubsection{\luavar{Formatter} Properties}
+\label{sec:advanced:formatter-properties}
+
+The following list describes the properties of a \luavar{Formatter} object.
+
+\begin{itemize*}
+\item \luavar{Formatter:args()}\\
+The \luavar{args} property is a (potentially) empty array of macro argument
+names.  It is generated upon first request (depending on the internal
+formatter's type) and cached.  Note that this may fail for string templates if
+there's a mismatch between (number or name) of \luavar{args} given in the
+\term{Formatter Entry Table} and the template fields.
+
+\item \luavar{Formatter:color()}\\
+The \luavar{color} is the color to be used for the formatter. It can be the
+name of a color, \luavar{'default'} (which is also the default value) or
+\luavar{'nocolor'} (see  \vref{sec:coloring}).
+
+\item \luavar{Formatter:comment()}\\
+The comment for the self-documentation, or an empty string.
+
+\item \luavar{Formatter:fields{}}\\
+An array with named replacement fields in a string template.  If the formatter
+is not template- but function- based it is an empty table.  The order of
+appearance in the template is preserved, and duplicates are suppressed (if a
+field is used more than once).  If an \luavar{<<<options>>>} field is present it
+is stored in the first position.
+
+\item \luavar{Formatter:has\_options()}\\
+Returns the \emph{position} of the optional argument if the formatter has one,
+or \luavar{nil} if it doesn't.  For string templates the optional argument is
+always stored in the first position while functions may place the
+\luavar{options} argument in an arbitrary position.
+
+\item \luavar{Formatter:is\_func()}\\
+Returns \luavar{true} if the formatter is function-based, \luavar{false} if it
+is template-based.
+
+\item \luavar{Formatter:is\_hidden()}\\
+Returns \luavar{true} if the \luavar{name()} property starts with an underscore.
+
+\item \luavar{Formatter:key()}\\
+The \luavar{key} is the property by which a formatter is addressed and looked
+up.  It is a string value in Lua-style dot-notation that is determined
+automatically by the (nested) position the \term{Formatter Entry} had in the
+\term{Templates Table}.
+
+\item \luavar{Formatter:macro()}\\
+Returns the generated \LaTeX\ macro for the formatter, or \luavar{nil} if it is
+considered a hidden formatter.  It is usually not necessary to access this
+property directly.
+
+\item \luavar{Formatter:name()}\\
+The macro name of the formatter.  This is either specified explicitly or
+generated from the \luavar{key} and the client's \luavar{prefix}
+(\vref{sec:usage:macro-names}).
+
+\item \luavar{Formatter:parent()}\\
+The \luavar{parent} of a formatter is the \term{Client} from which it has been
+created.  If a formatter is initially defined to be hidden by the client and
+later published by another client, the \luavar{parent} is still the original
+client.%
+\footnote{\NOTE{TODO:} \url{https://github.com/uliska/luatemplates/issues/34}}
+
+\end{itemize*}
+
+
+\subsubsection{\luavar{Formatter} Functions}
+\label{sec:advanced:formatter-functions}
+
+The following paragraphs describe the publicly available functions of a
+\luavar{Formatter} object.  Note that only \luavar{check\_options()},
+\luavar{\_format()} and \luavar{is\_formatter()} are \emph{intended} for public
+use.
+
+
+\paragraph{\luavar{Formatter:apply(...)}}
+\label{sec:advanced:formatter:apply}
+
+is the function that is implicitly called by \luavar{Templates:format()}.  It is
+possible to use this function too after having obtained a \luavar{Formatter}
+object through \luavar{Templates:formatter(key)}, but the canonical way of using
+another formatter is \luavar{self:format(key, ...)}.  If the internal formatter
+is a function then the \luavar{...} arguments are simply passed on to the
+function's argument list, in case of a string templates it is more complex: The
+arguments may be one out of:
+
+\begin{itemize*}
+\item A replacement table mapping field names to values
+\item A single string for templates with one field
+\item An array with field names plus the corresponding values as separate
+arguments
+\end{itemize*}
+
+
+\paragraph{\luavar{Formatter:check\_options(options, ignore\_declarations)}}
+\label{sec:advanced:formatter:check-options}
+
+is the function that is implicitly called by \luavar{Formatter:apply()} to
+preprocess the string passed from an optional macro argument.  It is possible to
+use this function separately to process a string formatted like options (for
+example if an options table contains sub-options).  To do so, the second
+argument \luavar{ignore\_declarations} should be set to a non-false value to
+prevent the function from validating the input against the formatter's options
+declaration.
+
+If the formatter has options declared the result will be initialized with the
+default values which will be overwritten with the values of the given options.
+If \luavar{options} is not a string but a table the function assumes that it has
+already been validated and simply overwrites the formatter's defaults with the
+values from the given table.
+
+
+\paragraph{\luavar{Formatter:docstring(options)}}
+\label{sec:advanced:formatter:check-docstring}
+
+is the function that is implicitly used for populating the self-documentation
+strings, and while it might be possible to make use of them otherwise there is
+no actual encouragment to do so.  It will return a string that can be written back to \LaTeX.
+
+Note that this will produce a warning and return an empty string if the \luavar {self-documentation} package option is not set. The options recognized by this command are:
+
+\begin{itemize*}
+\item \luavar{args}\\
+if given this array is used to populate the arguments with actual values.
+Otherwise (or if not enough args are given) the argument \emph{names} are
+printed.
+
+\item \luavar{demo}\\
+if \texttt{true} in addition to the docstring an actual usage example is
+typset, using \luavar{args} if given.
+
+\item \luavar{demosep}\\
+can be used to override the default value of the separator between docstring
+and usage example (defaults differ between inline and environment use).
+
+\item \luavar{nocomment}\\
+suppresses the typesetting of a comment (if one is specified) in environment
+docstrings.
+\end{itemize*}
+
+\paragraph{\luavar{Formatter:\_format(...)}}
+\label{sec:advanced:formatter:format}
+
+This command can be used to use formatters that are declared locally to the
+current \term{Client}.  See \vref{sec:advanced:reuse:local-formatters} for
+details.
+
+\paragraph{\luavar{Formatter:is\_formatter(obj)}}
+\label{sec:advanced:formatter:is-formatter}
+
+This command should be considered a \emph{class function} of the
+\luavar{Formatter} class because any actual \luavar{Formatter} object is by
+definition a formatter.  It is used by \luatemplates\ while iterating over a new
+client to discern between formatter entries and tree nodes.  The function
+returns \texttt{true} if the given object appears to be a correct
+\term{Formatter Entry Table} -- or, of course, if it is an actual
+\luavar{Formatter} object.
+
+
+\paragraph{\luavar{Formatter:update(entries)}}
+\label{sec:advanced:formatter:update}
+
+This function takes the entries of the given table and stores them in the
+\luavar{Formatter} object, with the names prepended by an underscore. Note that
+there should rarely be a valid use case for this function, that no checks are
+performed regarding the used keys, and especially that there is no support for
+any further action that might be necessary after modifying an existing
+\luavar{Formatter} object.
+
+
+\subsection{Reusing Code}
 \label{sec:advanced:reusing-code}
 
 \begin{itemize*}
@@ -2627,6 +2818,59 @@ automatically generated macro could be used like \luaMacroDocInline[demo,args=Fo
 which would print \textcolor{blue}{|a||b||c|}.
 
 
+\subsubsection{Accessing Parent/Client Table Fields}
+\label{sec:advanced:reuse:parent-table}
+
+Any functions or fields stored in the client's \luavar{TemplatesTable} object
+are accessible from a client's formatter functions but not from the outside.  So
+this is a place where local helper funtionality can safely be stored, such as
+additional calculations, algorithms or external (web/database \dots) lookup that
+are local to the client/package.  This somewhat competes with the concept of
+\term[Local Formatter]{Local Formatters} as described in
+\vref{sec:advanced:modular-design-principles}, and there are no hard rules
+regarding the choice of approach.  However, formatters are conceived as
+functions that take some arguments and return a processed string (although that
+limitation is lifted for \emph{local} formatters).  So a recommendation for a
+more complex process (e.g. take a key, look up data from an external source and
+format a report) that should be started from within a formatter would be to call
+a local formatter as a \emph{wrapper} and a simple interface, and implement the
+more extensive work as functions in the \luavar{TemplatesTable}.%
+\footnote{\NOTE{TODO:} Think of/provide a useful and telling example.}
+
+
+\subsubsection{Acessing \luavar{lua\_templates} Fields}
+\label{sec:advanced:reuse:lua-templates-fields}
+
+The main table \luavar{lua\_templates} (and through it, the support functions)
+provides some general functionality useful in formatter programming, most
+notably the \luavar{format()} function and probably the \luavar{wrap\_XXX()}
+functions (\vref{sec:advanced:the-lua-templates-object}).  All these can be
+directly accessed from within a formatter as described in
+\vref{sec:advanced:modular-design-principles}.
+
+
+\subsubsection{Using Built-in Formatters}
+\label{sec:advanced:reuse:builtin-formatters}
+
+
+\subsubsection{Using Local Formatters}
+\label{sec:advanced:reuse:loal-formatters}
+
+\subsection{Modular Design Principles}
+\label{sec:advanced:modular-design-principles}
+
+\medskip As formatters have this consistent behaviour of returning a processed
+string they can easily be used as building blocks to create a modular library of
+code snippets do avoid redundant implementation of formatting code: need an
+“n-th edition” superscript as part of various macros or consistent formatting of
+email addresses throughout various uses? simply factor them out in
+self-contained formatters.  \luatemplates\ also provides a number of
+built-in formatters for this purpose.  For example, wrapping a part of an
+element \mintinline{tex}{\emph{}} doesn't have to be coded manually but can be
+achieved with \mintinline{lua}{self:format('emph', my_emphasized_word)},
+encouraging modular creation of formatters and reducing redundant code.  See
+\vref{sec:builtin-formatters} for documentation of the available built-in
+formatters.
 
 \section{Examples}
 \label{sec:examples}
