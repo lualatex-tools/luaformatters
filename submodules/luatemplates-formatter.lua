@@ -49,13 +49,15 @@ function Formatter:new(parent, key, formatter)
     end
     local o = {
         -- flag to discern from primitive Formatter Entry Table
-        _is_Formatter = true
+        _is_Formatter = true,
+        -- holds the actual macro arguments
+        _macro_args = {},
+        -- key for accessing the formatter
+        _key = key,
+        -- lua_templates “client”
+        _parent = parent,
     }
     setmetatable(o, Formatter)
-    -- key for accessing the formatter
-    o._key = key
-    -- lua_templates “client”
-    o._parent = parent
     -- initialize macro name, may be overridden if 'name' property is given
     o._name = Formatter._make_name(o, key)
     -- assign options declaration if given
@@ -65,10 +67,6 @@ function Formatter:new(parent, key, formatter)
     end
     -- copy all properties that are given explicitly
     Formatter.update(o, formatter)
-
-    -- Initial validation
-    o._check_args(o)
-
 
     return o
 end
@@ -97,7 +95,14 @@ function Formatter:apply(...)
 end
 
 function Formatter:args()
-    if not self._macro_args then
+--[[
+    Cache and return a (potentially empty) array with macro argument names.
+    Construct that array upon first request, depending on the type of the
+    internal formatter and the presence of given arguments.
+    Handling arguments for string templates may fail if the user input
+    is faulty with regard to matching fields to arguments.
+--]]
+    if #self._macro_args == 0 then
         if self:is_func() then
             self:_set_args_from_function()
         elseif self._args then
@@ -106,6 +111,7 @@ function Formatter:args()
             self:_set_args_from_template()
         end
     end
+    if self:has_options() and not self._opt then self._opt = '' end
     return self._macro_args
 end
 
@@ -224,7 +230,8 @@ lua_templates:write({ '<<<formatter>>>', '<<<color>>>' }<<<args>>>)]]
 \<<<name>>><<<opt>>><<<args>>>]]
         local argstring = ''
         local opt = ''
-        if self._macro_args then
+        local macro_args = self:args()
+        if #macro_args > 0 then
             local doc_args = {}
             if self:has_options() then
                 if self._opt == '' then
@@ -234,7 +241,7 @@ lua_templates:write({ '<<<formatter>>>', '<<<color>>>' }<<<args>>>)]]
                 end
                 opt = '[<<<arg>>>]'
             end
-            for _, v in ipairs(self._macro_args) do
+            for _, v in ipairs(macro_args) do
                 if v ~= 'options' then
                     table.insert(doc_args, v)
                     argstring = argstring..'{<<<arg>>>}'
@@ -510,21 +517,6 @@ Replacement:
     return template
 end
 
-function Formatter:_check_args()
---[[
-    Create or validate arguments,
-    depending on whether the formatter is a function or a template.
---]]
-    if type(self._f) == 'function' then
-        self:_set_args_from_function()
-    elseif self._args then
-        self:_check_explicit_template_args()
-    else
-        self:_set_args_from_template()
-    end
-    if self:has_options() and not self._opt then self._opt = '' end
-end
-
 function Formatter:_check_explicit_template_args()
 --[[
     Perform validity checks for explicitly given args against
@@ -581,16 +573,18 @@ function Formatter:_format_arg_nums()
 --[[
     Return a string used for specifying macro argument numbers
 --]]
-    local args = self._macro_args
+    local args = self:args()
     -- format 'number of arguments'
     local result, arg_cnt = '', 0
-    if args and #args > 0 then
+    if #args > 0 then
         result = '['.. #args .. ']'
     else
         return ''
     end
     -- format optional argument
-    if self._opt then result = result .. '[' .. self._opt .. ']' end
+    if self:has_options() then
+        result = result .. '[' .. self._opt .. ']'
+    end
     return result
 end
 
@@ -602,7 +596,8 @@ function Formatter:_format_args()
 --]]
     local args = ''
     -- Skip if there are no arguments
-    if self._macro_args then
+    local macro_args = self:args()
+    if #macro_args > 0 then
         if self:is_func() then
             args = self:_macro_function_argstring()
         else
@@ -624,7 +619,8 @@ function Formatter:_macro_function_argstring()
     Needed for shifting an `options` argument to the head
 --]]
     local arg_indexes, args = {}, {}
-    for i=1, #self._macro_args, 1 do table.insert(arg_indexes, i) end
+    local macro_args = self:args()
+    for i=1, #macro_args, 1 do table.insert(arg_indexes, i) end
     -- Move an 'options' arg to the beginning (as the LaTeX #1 argument)
     local opt_index = self:has_options()
     if opt_index then
@@ -646,7 +642,7 @@ function Formatter:_macro_template_argstring()
     been moved to head in
 --]]
     local args = {}
-    for i, arg in ipairs(self._macro_args) do
+    for i, arg in ipairs(self:args()) do
         table.insert(args, string.format([[
 %s = %s]], arg, self:_numbered_argument(i)))
     end
@@ -724,6 +720,7 @@ function Formatter:_set_args_from_template()
 --]]
     local max = 1
     local fields = self:fields()
+    self._macro_args = {}
     for i, v in ipairs(fields) do
         if v == 'options' then
             max = max + 1
@@ -739,11 +736,7 @@ function Formatter:_set_args_from_template()
     %s
     ]], self._f))
         end
-        if not self._macro_args then
-            self._macro_args = { v }
-        else
-            table.insert(self._macro_args, v)
-        end
+        table.insert(self._macro_args, v)
     end
 end
 
