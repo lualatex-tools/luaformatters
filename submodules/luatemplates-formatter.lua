@@ -193,69 +193,6 @@ function Formatter:comment()
     return self._comment
 end
 
-function Formatter:_create_macro()
---[[
-    Create a LaTeX macro from the given entry.
-    All generated LaTeX macro work by calling Templates:write() in a
-    \directlua macro, passing their arguments to a specific formatter,
-    either as a vararg to a function or as a replacement table to a
-    template-based formatter.
-    (only creates the macro, doesn't return it)
---]]
-
-    -- string representation of macro acguments
-    local args = self:_format_args()
-    if args ~= '' then args = ', ' .. args end
-
-    -- Set up templates, nested for better readability
-    local wrapper_template = [[
-\newcommand{\<<<name>>>}<<<argnums>>>{\directlua{<<<lua>>>}}]]
-    local lua_template = [[
-lua_templates:write({ '<<<formatter>>>', '<<<color>>>' }<<<args>>>)]]
-
-    -- Populate templates with actual data
-    wrapper_template = wrapper_template:gsub(
-    '<<<name>>>', self:name()):gsub(
-    '<<<argnums>>>', self:_format_arg_nums())
-
-    lua_template = lua_template:gsub(
-        '<<<formatter>>>', self._key):gsub(
-        '<<<color>>>', self:color()):gsub(
-        '<<<args>>>', args)
-    self._macro = wrapper_template:gsub('<<<lua>>>', lua_template)
-
-    -- Create docstring for the macro
-    if template_opts['self-documentation'] then
-        local doc_template = [[
-\<<<name>>><<<opt>>><<<args>>>]]
-        local argstring = ''
-        local opt = ''
-        local macro_args = self:args()
-        if #macro_args > 0 then
-            local doc_args = {}
-            if self:has_options() then
-                if self._opt == '' then
-                    table.insert(doc_args, 'options')
-                else
-                    table.insert(doc_args, self._opt)
-                end
-                opt = '[<<<arg>>>]'
-            end
-            for _, v in ipairs(macro_args) do
-                if v ~= 'options' then
-                    table.insert(doc_args, v)
-                    argstring = argstring..'{<<<arg>>>}'
-                end
-            end
-            self._doc_args = doc_args
-        end
-        self._docstring = doc_template:gsub(
-            '<<<name>>>', self:name()):gsub(
-            '<<<opt>>>', opt):gsub(
-            '<<<args>>>', argstring)
-    end
-end
-
 function Formatter:docstring(options)
 --[[
     Populate and return the macro docstring (the LaTeX code needed to use)
@@ -566,6 +503,69 @@ Present arguments:
 - %s
 ]], v, table.concat(self._args, '\n- ')))
         end
+    end
+end
+
+function Formatter:_create_macro()
+--[[
+    Create a LaTeX macro from the given entry.
+    All generated LaTeX macro work by calling Templates:write() in a
+    \directlua macro, passing their arguments to a specific formatter,
+    either as a vararg to a function or as a replacement table to a
+    template-based formatter.
+    (only creates the macro, doesn't return it)
+--]]
+
+    -- string representation of macro acguments
+    local args = self:_format_args()
+    if args ~= '' then args = ', ' .. args end
+
+    -- Set up templates, nested for better readability
+    local wrapper_template = [[
+\newcommand{\<<<name>>>}<<<argnums>>>{\directlua{<<<lua>>>}}]]
+    local lua_template = [[
+lua_templates:write({ '<<<formatter>>>', '<<<color>>>' }<<<args>>>)]]
+
+    -- Populate templates with actual data
+    wrapper_template = wrapper_template:gsub(
+    '<<<name>>>', self:name()):gsub(
+    '<<<argnums>>>', self:_format_arg_nums())
+
+    lua_template = lua_template:gsub(
+        '<<<formatter>>>', self._key):gsub(
+        '<<<color>>>', self:color()):gsub(
+        '<<<args>>>', args)
+    self._macro = wrapper_template:gsub('<<<lua>>>', lua_template)
+
+    -- Create docstring for the macro
+    if template_opts['self-documentation'] then
+        local doc_template = [[
+\<<<name>>><<<opt>>><<<args>>>]]
+        local argstring = ''
+        local opt = ''
+        local macro_args = self:args()
+        if #macro_args > 0 then
+            local doc_args = {}
+            if self:has_options() then
+                if self._opt == '' then
+                    table.insert(doc_args, 'options')
+                else
+                    table.insert(doc_args, self._opt)
+                end
+                opt = '[<<<arg>>>]'
+            end
+            for _, v in ipairs(macro_args) do
+                if v ~= 'options' then
+                    table.insert(doc_args, v)
+                    argstring = argstring..'{<<<arg>>>}'
+                end
+            end
+            self._doc_args = doc_args
+        end
+        self._docstring = doc_template:gsub(
+            '<<<name>>>', self:name()):gsub(
+            '<<<opt>>>', opt):gsub(
+            '<<<args>>>', argstring)
     end
 end
 
