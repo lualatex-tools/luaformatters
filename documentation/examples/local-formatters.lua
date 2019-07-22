@@ -42,4 +42,15 @@ function LOCALS.formatters:foo_bar(first, second)
     return first .. ' | ' .. second
 end
 
+LOCALS:add_local_formatter('work-number', function (self, text)
+    return text:gsub(
+    ' ', ''):gsub(
+    '/', ','):gsub(
+    ',', [[,\,]])
+end)
+
+function LOCALS.formatters:dv(text)
+    return self:format('DV', self:_format('work-number', text))
+end
+
 return LOCALS

@@ -196,41 +196,6 @@ function MANUAL.formatters:reverse(text, options)
 end
 
 --[[
-    A somewhat more complex function, although still with one
-    argument only. This one makes use of a builtin formatter
-    through self:format(). Formatters to be reused this way can
-    be built-in, defined in the same client package or in another
-    client that has been added to the templates.
-    NOTE: The function name `check_range` will produce a
-    *macro* name `\checkRange`.
---]]
-function MANUAL.formatters:check_range(text)
-    local processed = self:format('range', text)
-    if processed ~= text then
-        text = processed .. string.format([[ (input was: \texttt{\{%s\}})]], text)
-    end
-    return text
-end
-
---[[
-    Alternative approaches to use a formatter from *the same*
-    TemplatesTable instance:
-    - targeting the formatter is also possible with the array
-      of client name and formatter key.
-    This approach may be used to guarantee that the formatter
-    in the *current* TemplatesTable is found and not another one
-    that might have the same key or name.
---]]
-function MANUAL.formatters:Bar(text)
-    local result = ''
-    for i=1, #text, 1 do
-        result = result .. self:format('foo', text:sub(i, i))
---        result = result .. self:format({ 'manual', 'foo' }, text:sub(i, i))
-    end
-    return result
-end
-
---[[
     Configure a single formatter.
     Add the given fields to the formatter entry table.
     If this includes the `name` property (or the second argument is a string)

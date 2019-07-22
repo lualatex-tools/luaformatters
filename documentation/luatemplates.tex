@@ -53,6 +53,8 @@ self-documentation, % Create the self-documentation commands
 % Add further templates files. Separate clients are added to be able to
 % *list* them at the end of the manual.
 \addLuaTemplates{examples/closure}
+\addLuaTemplates{examples/format}
+\addLuaTemplates{examples/local-formatters.lua}
 
 % Remaining functionality that is used in the manual
 % but not suitable for listings
@@ -1523,9 +1525,10 @@ simplest form they work like character styles, applying formatting to some text
 to add arbitrary visible elements to the content.  This too can be used to
 ensure orthotypgraphic consistency, as exemplified in the command \cmd{DV}
 (“Deutsch-Verzeichnis”), which on its first level adds a small caps \textsc{d}
-and a thin space before the number (\luaMacroDocInline[demo,nocomment,args=911]{DV}).%
-\footnote{This will be expanded in \vref{sec:advanced:reusing-code} when
-discussing the reuse of formatter \emph{functions}.}
+and a thin space before the number
+(\luaMacroDocInline[demo,nocomment,args=911]{DV}).%
+\footnote{This will be expanded in \vref{sec:advanced:modular:local-formatters}
+when discussing the reuse of formatter \emph{functions}.}
 
 \begin{minted}{lua}
 MANUAL:add_formatter('DV', {
@@ -2012,7 +2015,7 @@ decided what will happen with that package.
 
 
 \subsubsection{Built-in Formatters}
-\label{sec:builtin-formatters}
+\label{sec:defining:builtin-formatters}
 
 \luatemplates\ implements a substantial number of \term[Built-in
 Formatter]{Built-in Formatters} that can be used from everywhere in the Lua
@@ -2778,7 +2781,7 @@ docstrings.
 \label{sec:advanced:formatter:format}
 
 This command can be used to use formatters that are declared locally to the
-current \term{Client}.  See \vref{sec:advanced:reuse:local-formatters} for
+current \term{Client}.  See \vref{sec:advanced:modular:local-formatters} for
 details.
 
 \paragraph{\luavar{Formatter:is\_formatter(obj)}}
@@ -2804,94 +2807,139 @@ any further action that might be necessary after modifying an existing
 \luavar{Formatter} object.
 
 
-\subsection{Reusing Code}
-\label{sec:advanced:reusing-code}
+\subsection{Modular Design Principles}
+\label{sec:advanced:modular-design-principles}
 
-\begin{itemize*}
-\item Using other formatters from the \emph{same} client\\
-Use \cmd{DV} example from \vref{sec:defining:styles}
-\item Using other (“private”) code from the same client
-\item Using formatters from \emph{other} clients
-\item Theoretical access to \emph{anything} through \luatemplates
-\item Functionality provided by \luavar{Templates}
-\label{sec:builtin-functions}
-\item Built-in Formatters
-\end{itemize*}
-
-
-Access to sibling formatters is demonstrated in the following \luavar{Bar()} formatter:
-
-\begin{minted}{lua}
-function MANUAL.formatters:Bar(text)
-	 local result = ''
-	 for i=1, #text, 1 do
-			 result = result .. self.foo:apply(text:sub(i, i))
-	 end
-	 return result
-end
-\end{minted}
-
-\noindent This function iterates over the characters in the \luavar{text}
-argument and replaces each with the result of calling \luavar{foo()} on it.  The
-automatically generated macro could be used like \luaMacroDocInline[demo,args=Foo]{Bar}.
-
-\mintinline{tex}{\bar{abc}},
-which would print \textcolor{blue}{|a||b||c|}.
-
-
-\subsubsection{Accessing Parent/Client Table Fields}
-\label{sec:advanced:reuse:parent-table}
-
-Any functions or fields stored in the client's \luavar{TemplatesTable} object
-are accessible from a client's formatter functions but not from the outside.  So
-this is a place where local helper funtionality can safely be stored, such as
-additional calculations, algorithms or external (web/database \dots) lookup that
-are local to the client/package.  This somewhat competes with the concept of
-\term[Local Formatter]{Local Formatters} as described in
-\vref{sec:advanced:modular-design-principles}, and there are no hard rules
-regarding the choice of approach.  However, formatters are conceived as
-functions that take some arguments and return a processed string (although that
-limitation is lifted for \emph{local} formatters).  So a recommendation for a
-more complex process (e.g. take a key, look up data from an external source and
-format a report) that should be started from within a formatter would be to call
-a local formatter as a \emph{wrapper} and a simple interface, and implement the
-more extensive work as functions in the \luavar{TemplatesTable}.%
-\footnote{\NOTE{TODO:} Think of/provide a useful and telling example.}
+One of the goals of \luatemplates\ is encouraging and simplifying the reuse of
+code while developing macro libraries.  This section aims at giving an overview
+of the available techniques that can be used to benefit from the package's
+provisions.
 
 
 \subsubsection{Acessing \luavar{lua\_templates} Fields}
-\label{sec:advanced:reuse:lua-templates-fields}
+\label{sec:advanced:modular:lua-templates-fields}
 
 The main table \luavar{lua\_templates} (and through it, the support functions)
 provides some general functionality useful in formatter programming, most
 notably the \luavar{format()} function and probably the \luavar{wrap\_XXX()}
 functions (\vref{sec:advanced:the-lua-templates-object}).  All these can be
-directly accessed from within a formatter as described in
-\vref{sec:advanced:modular-design-principles}.
+directly accessed from within a formatter using the \luavar{self:} notation.
+
+
+\subsubsection{Accessing Parent/Client Table Fields}
+\label{sec:advanced:modular:parent-table}
+
+A formatter can access fields of its “parent” \term{Client}'s
+\luavar{TemplatesTable} object that are not publicly exposed as formatters and
+can be considered private to the \term{Client}. So this is the place to
+implement helper functionality that is required by the actual formatters but not
+intended to be shared by other code.  This somewhat competes with the concept of
+\term[Local Formatter]{Local Formatters} as described in
+\vref{sec:advanced:modular:local-formatters}, and there are no hard rules
+regarding the choice of the solution for a given use case.  As a rule of thumb it may be a good starting point to implement functionality that “formats” data into strings, either to be printed to \LaTeX\ or to be used as building blocks in larger contexts, as “formatters” and other functionality such as complex lookup operations or mere helper routines as “functions”.
+
+\NOTE{TODO:} Implement example: function that returns the current Git HEAD plus a flag if it's clean or dirty. Check if Git is installed and if we're in a Git repo. Return a table (with further commit information(?)).
+
+
+
+\subsubsection{Using Registered Formatters}
+\label{sec:advanced:modular:formatters}
+
+All formatters that have been registered in the current or any other client can
+be used from a formatter.  It is important to keep in mind that the order in
+which \term[Client]{Clients} are registered does \emph{not} affect the ability
+of using formatters.  When clients are added to the library their macros are
+created, but these macros are only \emph{invoked} at a much later stage, when
+\emph{all} packages have already been processed and their macros created.
+
+There are \emph{other} aspects where the order of addition to the library
+\emph{does} matter, though:  formatters are generally looked up in the reverse
+order of their client's addition to the library, so if there should be multiple
+formatters with the same lookup key, the one added last will shadow any other
+formatter.%
+\footnote{\NOTE{NOTE:} The behaviour for name clashes is not finally decided.
+See \url{https://github.com/uliska/luatemplates/issues/34}.}
+
+Registered formatters are used using
+
+\begin{minted}{lua}
+self:format(<key>, ...)
+\end{minted}
+
+A registered formatter is looked up, first by its \luavar{key} then by its \luavar{name}, by default in all clients, searching in reverse order of the client's addition.  If necessary it is also possible to address a specific client:
+
+\begin{minted}{lua}
+self:format({ <client-name>, <key> }, ...)
+\end{minted}
+
+\noindent The arguments passed to \luavar{format()} have to match the expected arguments of the formatter.
+
+If no formatter with the requested key/name is found an error is raised and the
+compilation aborted.  If it is not known whether a given formatter is available
+(for example when asking for a formatter from another \LaTeX\ package)
+\luavar{format()} shouldn't be called directly, rather one should first locate
+the formatter and then conditionally \luavar{apply()} it:
+
+\begin{minted}{lua}
+local f = self:formatter(<key>)
+if f then
+	f:apply(<args>)
+else
+	<do-something-else or report>
+end
+\end{minted}
+
+\noindent This approach may be useful to make use of some functionality of
+another package but provide fallback functionality if that package isn't loaded.
+
+The example macro \luaMacroDocInline{Bar} (listing in
+\vref{sec:examples:using-formatters}) makes use of the formatter \luavar{foo}
+(defined in the \luavar{MANUAL} \luavar{TemplatesTable}) and also shows the
+safety check (even if that isn't necessary when the used formatter is
+\emph{known} to be available). The formatter iterates over the characters in the
+\luavar{text} argument and replaces each with the result of calling
+\luavar{foo()} on it.  The automatically generated macro could be used like
+\luaMacroDocInline[demo,args=Foo]{Bar}.
 
 
 \subsubsection{Using Built-in Formatters}
-\label{sec:advanced:reuse:builtin-formatters}
+\label{sec:advanced:modular:builtin-formatters}
+
+Using the built-in formatters described in \vref{sec:defining:builtin-formatters} is basically a special case of using arbitrary formatters, except that it is guaranteed that they are loaded.
 
 
 \subsubsection{Using Local Formatters}
-\label{sec:advanced:reuse:loal-formatters}
+\label{sec:advanced:modular:local-formatters}
 
-\subsection{Modular Design Principles}
-\label{sec:advanced:modular-design-principles}
+Formatters that have been defined as \term[Local Formatter]{Local Formatters}
+can be applied using \luavar{self:\_format(<key>, <args>)} (note the leading
+underscore in the function which in this case signifies a local
+\emph{formatter}, not a private function). The command \luaMacroDocInline{dv}
+(“Deutsch-Verzeichnis”) builds upon the \luaMacroDocInline{DV} example from
+\vref{sec:defining:styles}, adding some smarter functionality: not only does it
+ensure orthotypgraphic consistency prepending the catalogue abbreviation but it
+also ensures consistent typesetting of the catalogue number and its possible
+sub-entry.  The function is listed in \vref{sec:examples:local-formatters}, and
+the following entries are all printed consistently:
 
-\medskip As formatters have this consistent behaviour of returning a processed
-string they can easily be used as building blocks to create a modular library of
-code snippets do avoid redundant implementation of formatting code: need an
-“n-th edition” superscript as part of various macros or consistent formatting of
-email addresses throughout various uses? simply factor them out in
-self-contained formatters.  \luatemplates\ also provides a number of
-built-in formatters for this purpose.  For example, wrapping a part of an
-element \mintinline{tex}{\emph{}} doesn't have to be coded manually but can be
-achieved with \mintinline{lua}{self:format('emph', my_emphasized_word)},
-encouraging modular creation of formatters and reducing redundant code.  See
-\vref{sec:builtin-formatters} for documentation of the available built-in
-formatters.
+\begin{itemize*}
+\item \luaMacroDocInline[demo, args={550}]{dv}
+\item \luaMacroDocInline[demo, args={911/15}]{dv}
+\item \mintinline{tex}{\dv{911,16}}: \dv{911,16}
+\item \mintinline{tex}{\dv{911, 16}}: \dv{911, 16}
+\end{itemize*}
+
+\noindent This formatter makes use of a pretty common idiom: Formatting a one-argument string template with the result of a second (local) formatter:%
+\footnote{Since this is so common it is intended to provide some syntactic sugar
+to make it even more convenient to use
+(\url{https://github.com/uliska/luatemplates/issues/33}).}
+
+\begin{minted}{lua}
+function LOCALS.formatters:dv(text)
+    return self:format('DV', self:_format('work-number', text))
+end
+\end{minted}
+
 
 \section{Examples}
 \label{sec:examples}
@@ -2947,6 +2995,20 @@ through corresponding \texttt{.tex} files in the \texttt{documentation/examples}
 subdirectory of the repository.
 
 
+\subsubsection{Using Formatters}
+\label{sec:examples:using-formatters}
+
+\inputminted{lua}{examples/format.lua}
+
+
+\subsubsection{Local Formatters}
+\label{sec:examples:local-formatters}
+
+\inputminted{lua}{examples/local-formatters.lua}
+
+\inputminted{tex}{examples/local-formatters.tex}
+
+
 \subsubsection{Closures}
 \label{sec:examples:closures}
 
@@ -2962,14 +3024,6 @@ The file \texttt{examples/closures.lua} is made available to \texttt{luatemplate
 Table}.  Basically this is done for all further examples.
 
 \inputminted{lua}{examples/closure.lua}
-
-
-\subsubsection{Local Formatters}
-\label{sec:examples:local-formatters}
-
-\inputminted{lua}{examples/local-formatters.lua}
-
-\inputminted{tex}{examples/local-formatters.tex}
 
 
 \subsubsection{Validating the Optional Argument}
