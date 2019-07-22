@@ -9,31 +9,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \documentclass[12pt]{scrartcl}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% The following includes are general for the writing of this document
-%% and not related to the working of luaformatters
-\RequirePackage{fontspec}
-\RequirePackage{microtype}
-\RequirePackage[oldstyle,proportional]{libertine}
-\setmonofont[Scale=MatchLowercase,StylisticSet=1]{InconsolataN}
-\defaultfontfeatures{
-	Ligatures=TeX,
-	Scale=MatchLowercase,
-	Numbers=Proportional,
-	Numbers=OldStyle
-}
-\frenchspacing
-\RequirePackage[dvipsnames]{xcolor}
-\RequirePackage{graphicx}
-\RequirePackage{mdwlist}
-\RequirePackage{pdfpages}
-\RequirePackage{dirtree}
-\usepackage{varioref}
-\usepackage[colorlinks]{hyperref}
-\usepackage{cleveref}
-%% End general includes
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{luaformattersmanual}
 
 % Use or require the `luaformatters` package with (some of the) options
 % NOTE: option self-documentation implicitly loads minted, so that doesn't
@@ -43,8 +19,7 @@ color,              % use colors
 self-documentation, % Create the self-documentation commands
 ]{luaformatters}
 
-% Set up the Formatters object, passing a variable name prefix
-% and a configuration file name.
+% Set up the Formatters object, passing a configuration file name.
 % The Formatters object will later be globally available to Lua by the name
 % manual_templates and could be adressed as such from any \directlua command.
 % luaformatters-manual-config.lua must be findable by LaTeX.
@@ -59,8 +34,6 @@ self-documentation, % Create the self-documentation commands
 % Remaining functionality that is used in the manual
 % but not suitable for listings
 \addLuaFormatters{examples/additionals}
-
-\setminted[lua]{tabsize=4}
 
 \title{\luaformatters}
 \subtitle{v0.8}

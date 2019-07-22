@@ -1,0 +1,29 @@
+\NeedsTeXFormat{LaTeX2e}%
+\ProvidesPackage{luaformattersmanual}[2019/07/10 v0.8]
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% The following includes are general for the writing of this document
+%% and not related to the working of luaformatters
+\RequirePackage{fontspec}
+\RequirePackage{microtype}
+\RequirePackage[oldstyle,proportional]{libertine}
+\setmonofont[Scale=MatchLowercase,StylisticSet=1]{InconsolataN}
+\defaultfontfeatures{
+	Ligatures=TeX,
+	Scale=MatchLowercase,
+	Numbers=Proportional,
+	Numbers=OldStyle
+}
+\frenchspacing
+\RequirePackage[dvipsnames]{xcolor}
+\RequirePackage{graphicx}
+\RequirePackage{mdwlist}
+\RequirePackage{pdfpages}
+\RequirePackage{dirtree}
+\RequirePackage{minted}
+\setminted[lua]{tabsize=4}
+\usepackage{varioref}
+\usepackage[colorlinks]{hyperref}
+\usepackage{cleveref}
+%% End general includes
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
