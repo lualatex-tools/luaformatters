@@ -215,20 +215,16 @@ end
 --[[
     Alternative approaches to use a formatter from *the same*
     TemplatesTable instance:
-    - self.foo also finds the Formatter item that is actually
-      stored at self.formatters:foo.
-      On this object the `apply()` method has to be called.
     - targeting the formatter is also possible with the array
       of client name and formatter key.
-    Both approaches may be used to guarantee that the formatter
+    This approach may be used to guarantee that the formatter
     in the *current* TemplatesTable is found and not another one
-    that might have the same key.
+    that might have the same key or name.
 --]]
 function MANUAL.formatters:Bar(text)
     local result = ''
     for i=1, #text, 1 do
         result = result .. self:format('foo', text:sub(i, i))
---        result = result .. self.foo:apply(text:sub(i, i))
 --        result = result .. self:format({ 'manual', 'foo' }, text:sub(i, i))
     end
     return result
