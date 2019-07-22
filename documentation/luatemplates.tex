@@ -133,15 +133,15 @@ corresponding \LaTeX\ macros are generated automatically. Additionally the
 package provides tools for and encourages using modular approaches to creating
 templates and styles.
 
-This manual is of course written using \luatemplates, and therefore it
-is strongly recommended to study the sources too, not only the compiled PDF
-file.  Depending on the installation type these may be found in different
-places.  If you read this from a \TeX\ Live installation try \texttt{kpsewhich
+This manual is of course written using \luatemplates, and therefore it is
+strongly recommended to study the sources too, not only the compiled PDF file.
+Depending on the installation type these may be found in different places.  If
+you read this from a \TeX\ Live installation try \texttt{kpsewhich
 luatemplates.tex} and \texttt{kpsewhich luatemplates-manual-config.lua} to get
 their exact location.  Other example files should be located in the same place.
-\emph{Minimal} and \emph{basic} working examples are listed later in this manual
-(\vref{sec:mwe} and \vref{sec:example:manual-templates}), and they are also available
-as files beside the sources for this manual.%
+A number of general and specific example files are listed in
+\vref{sec:examples}, and they are also available as files beside the sources for
+this manual.%
 \footnote{\url{https://github.com/uliska/luatemplates/tree/master/documentation}.%
 \footnote{\textbf{TODO:} Clarify where they end up in TeX Live.}}
 
@@ -456,7 +456,7 @@ as package options).
 
 The following package options are available, note that many of them don't affect
 the general operation of the package but the behaviour of specific
-\emph{built-in formatters} (see \vref{sec:builtin-formatters}).
+\emph{built-in formatters} (see \vref{sec:defining:builtin-formatters}).
 
 
 \paragraph{\luavar{color} (boolean, false)}
@@ -1302,14 +1302,16 @@ MANUAL:add_formatters('All hidden', 'hidden._subtree', {
 which would also be true for any further nesting below
 \luavar{hidden.\_subtree}.
 
-It is possible to hide formatters both through their \emph{key} and through
-their \emph{name}.  While the difference has no practical consequences it can be
-exploited to send different “messages” to potential users.  When formatters are
-looked up in Lua code this always uses the key, not the name (see
-\vref{sec:reusing-code}).  By storing a formatter in a “clean” key and hiding it
-through the \luavar{name} field one can signal that the formatter is free to be
-reused, while hiding through the \emph{key} may suggest that a formatter is
-actually intended for private use only.
+It is possible to hide formatters both through their \emph{key} and through a
+dedicated \emph{name}.  While the difference has no practical consequences it
+can be exploited to send different “messages” to potential users.  The
+\luavar{name} of a formatter is determined from the \luavar{key}, so when the
+key has a “hidden” name and no explicit name is given no macro is created. But
+when the key is not hidden and a hidden name is explicitly given, there isn't a
+macro either. By storing a formatter in a “clean” key and hiding it through the
+\luavar{name} field one can signal that the formatter is free to be reused,
+while hiding through the \emph{key} may suggest that a formatter is actually
+intended for private use only.
 
 \subsubsection{Argument handling}
 \label{sec:usage-argument-handling}
@@ -1398,7 +1400,7 @@ building blocks accessible to Lua functions and on the other hand to be
 selectively publishable by \emph{other} packages.  The most prominent example of
 this is a collection of \term{Built-in Formatters} defined by
 \luatemplates\ itself, which is documented in
-\vref{sec:builtin-formatters}.
+\vref{sec:defining:builtin-formatters}.
 
 Publishing hidden formatters essentially involves renaming them to non-hidden names, so the typical way of doing it is to simply assign a new name to a function previously hidden through an underscore:
 
@@ -1834,7 +1836,7 @@ variables that can be accessed directly through \luavar{self.} or
 \luavar{self:}.  For basic formatter programming as discussed in the current
 chapter the main functionality of interest are the built-in support functions
 documented in \vref{sec:defining:support-functions}, further options are
-described in \vref{sec:advanced:reusing-code}.
+described in \vref{sec:advanced:modular-design-principles}.
 
 
 \subsubsection{Argument Handling}
@@ -2201,7 +2203,7 @@ list field:
 The \luavar{Templates} class provides a number of useful helper functions that
 can be used in formatters to perform common tasks and make programming macros a
 bit easier.  In a way they are similar to the \term[Built-in Formatter]{Built-in
-Formatters} (\vref{sec:builtin-formatters}), but they are not accessed using the
+Formatters} (\vref{sec:defining:builtin-formatters}), but they are not accessed using the
 \luavar{format()} method, and they do not always return simple strings.
 
 From within a \term{Formatter} these functions can be accessed using the
