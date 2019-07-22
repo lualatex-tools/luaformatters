@@ -25,7 +25,7 @@ local function term()
         local ref_term = term
         -- options is used as a simple string here,
         -- used to store the core form of a given term.
-        if options._original ~= '' then ref_term = options._original end
+        if options[1] ~= '' then ref_term = options[1] end
         term = self:wrap_macro('texttt', term)
         if used_terms[ref_term] then
             return term

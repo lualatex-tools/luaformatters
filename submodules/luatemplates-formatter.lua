@@ -142,6 +142,8 @@ function Formatter:check_options(options, ignore_declarations)
             result[k] = v
         end
     else
+        -- store the original string in case someone needs it
+        table.insert(result, options)
         -- finally have the string parsed and validated
         local loc_opts
         if self._options and not ignore_declarations then
@@ -165,8 +167,6 @@ function Formatter:check_options(options, ignore_declarations)
             if v == '' or v == 'true' then result[k] = true
             elseif v == 'false' then result[k] = false end
         end
-        -- store the original string in case someone needs it
-        result._original = options
     end
     return result
 end
