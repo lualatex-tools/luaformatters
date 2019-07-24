@@ -37,6 +37,8 @@ Formatters.__index = Formatters
 -- Has to be made available as global function already now
 _G['lua_formatters'] = Formatters
 
+local formatters_opts = lua_options.client('formatters')
+
 -- Load supporting modules
 local Formatter = require('luaformatters-formatter')
 local FormattersTable = require('luaformatters-templatestable')

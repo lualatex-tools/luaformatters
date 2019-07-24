@@ -39,6 +39,8 @@ local BUILTINS = lua_formatters:new{
     docstrings = {}
 }
 
+local formatters_opts = lua_options.client('formatters')
+
 --[[
     BUILTINS.
     “private” code used by the Formatters entries

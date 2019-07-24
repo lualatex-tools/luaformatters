@@ -437,11 +437,11 @@ loading.  Package options are specified using the \texttt{key=value} syntax, but
 boolean values can be set to \texttt{true} by simply passing their name:
 \luavar{[color]} is equivalent to \luavar{[color=true]}.
 
-\cmd{luaformattersSetOption\{key\}\{value\}} can be used to change the value of
-an option during the course of the document.  However, depending on the option
-this may or may not have any or the desired results, see below for details.
-Note that boolean values always have to be given explicitly (other than when set
-as package options).
+\cmd{setluaoption\{formatters\}\{key\}\{value\}} can be used to change the value
+of an option during the course of the document.  However, depending on the
+option this may or may not have any or the desired results, see below for
+details. Note that boolean values always have to be given explicitly (other than
+when set as package options).
 
 The following package options are available, note that many of them don't affect
 the general operation of the package but the behaviour of specific

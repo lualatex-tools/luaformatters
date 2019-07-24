@@ -6,7 +6,7 @@
 % Options
 \directlua{
   local _opts = lua_options
-  formatters_opts = _opts.Opts:new('formatters_opts', {
+  lua_options.register('formatters', {
     ['color'] = {'false', 'true', ''},
       ['default-color'] = {'blue'},
     ['element-separator'] = {	'{,}' },
@@ -43,14 +43,4 @@
   \directlua{
     lua_formatters:add(require(kpse.find_file([[\string#1]]) or [[\string#1]]))
   }
-}
-
-% Macro to change a package option during the document.
-% Boolean values have to be specified explicitly (different from setting
-% *package* options on loading).
-% Note that not all options can *reasonably* be changed after loading.
-\newcommand*{\luaformattersSetOption}[2]{
-\directlua{formatters_opts.set_option(formatters_opts,
-  '\luatexluaescapestring{#1}',
-  '\luatexluaescapestring{#2}')}
 }

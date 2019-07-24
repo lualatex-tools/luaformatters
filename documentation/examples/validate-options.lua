@@ -2,7 +2,7 @@
     Validating optional arguments.
     If an `options` table is specified in a Formatter Entry Table
     its content is used to prepopulate and to validate a given optional
-    argument. 
+    argument.
 --]]
 
 local VALIDATION = lua_formatters:new{
@@ -36,7 +36,7 @@ VALIDATION:add_configuration{
     },
     gap = {
         options = {
-            ['width'] = { '3em', formatters_opts.is_dim },
+            ['width'] = { '3em', lua_options.is_dim },
             ['rule'] = { 'false', 'true', '' },
         }
     }
