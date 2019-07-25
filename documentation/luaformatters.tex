@@ -453,7 +453,7 @@ tools.} %
 This includes the handling of \luaformatters' own package options as
 well as providing tools to deal with optional arguments in formatter functions
 and created \LaTeX\ macros.  Additionally it is possible to integrate that with
-standalone instances of \package{lyluatextools}, which will only be touched in
+standalone instances of \package{luaoptions}, which will only be touched in
 \vref{sec:advanced-programming}.
 
 \luaformatters\ has a number of package options which will be described
@@ -497,9 +497,7 @@ coloring is switched off for that macro through the pseudo-color
 
 \paragraph{\luavar{element-separator} (,)}
 
-Separator to be used in the built-in formatter \luavar{add\_element}.%
-\footnote{\textbf{NOTE:} This is affected by
-\url{https://github.com/uliska/luaformatters/issues/5}.}
+Separator to be used in the built-in formatter \luavar{add\_element}.
 
 
 \paragraph{\luavar{number-case} (normal)}
@@ -531,18 +529,14 @@ Separator used when printing a range.  Used by the built-in formatter \luavar{ra
 
 \paragraph{\luavar{list-sep} (', ')}
 
-Separator used for all but the last elements of a list produced by the built-in formatter
-\luavar{list\_format}.%
-\footnote{\textbf{NOTE:} This is affected by
-\url{https://github.com/uliska/luaformatters/issues/5}.}
+Separator used for all but the last elements of a list produced by the built-in
+formatter \luavar{list\_format}.
 
 
 \paragraph{\luavar{list-last-sep} (' and ')}
 
 Separator used for the last two elements of a list produced by the built-in formatter
-\luavar{list\_format}.%
-\footnote{\textbf{NOTE:} This is affected by
-\url{https://github.com/uliska/luaformatters/issues/5}.}
+\luavar{list\_format}.
 
 
 \paragraph{\luavar{self-documentation} (boolean, false)}
@@ -1999,7 +1993,7 @@ skip the validation described in the next section.
 \subsubsection{Validating Optional Arguments}
 \label{sec:defining:validating-optional-arguments}
 
-The \package{lyluatextools} package this option handling is built upon also
+The \package{luaoptions} package this option handling is built upon also
 provides functionality to \emph{validate} options and optional arguments, both
 with regard to “known options” and to expected option types or values.
 \luaformatters\ can make this validation available to formatter
@@ -2024,12 +2018,11 @@ key, without an \luavar{=}). Finally, even if missing in the macro invocation,
 the resulting \luavar{options} table will always have the \luavar{upper} field,
 preset to the default, \texttt{false}.
 
-\medskip
-
-\NOTE{TO BE DONE:} The option declaration has to be fully documented, but
-presumably not here but in \package{lyluatextools}, once it has been finally
-decided what will happen with that package.
-
+The options and syntax of option declaration is covered in the manual for the
+\package{luaoptions} package.%
+\footnote{\NOTE{NOTE:} Currently this is not the case, the manual for
+\package{luaoptions} will only be completed by the \texttt{v1.0} release of
+\luaformatters.}
 
 \subsubsection{Built-in Formatters}
 \label{sec:defining:builtin-formatters}
@@ -2154,10 +2147,8 @@ be used at will.
 \end{minted}
 
 \noindent will return a list where each of the elements has been formatted with
-the \luavar{bold} formatter: \names[formatter=bold]{Haydn and Mozart and
-Beethoven}.%
-\footnote{This is still affected by
-\url{https://github.com/uliska/luaformatters/issues/5}, suppressing the spaces.}
+the built-in \luavar{bold} formatter: \names[formatter=bold]{Haydn and Mozart
+and Beethoven}.
 
 
 
@@ -2396,11 +2387,6 @@ whether it is a long or other multiline string.  This is used from
 
 \section{Advanced Formatter Programming}
 \label{sec:advanced-programming}
-
-\textbf{TO BE WRITTEN} before a v1.0 release!
-
-The remainder of this manual consists (at this point) of bullet lists and raw material copied over from other places. This chapter has the responsibility to explain in (some) depth what is going on technically with the package, and it aims at giving a more in-depth introduction to idiomatic working with the package.
-
 
 
 \subsection{The \LaTeX\ Macro Lifecycle}
