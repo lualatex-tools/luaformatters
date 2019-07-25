@@ -25,15 +25,15 @@ self-documentation, % Create the self-documentation commands
 % luaformatters-manual-config.lua must be findable by LaTeX.
 \addLuaFormatters{luaformatters-manual-templates}
 
-% Add further templates files. Separate clients are added to be able to
-% *list* them at the end of the manual.
+% The formatters are organized in a modular fashion, distributed over several
+% declaration files.  The purpose in *this document* is to be able to list
+% the following files separately at the end of the manual, but it also shows
+% an approach that can be used for other purposes of modular organization.
 \addLuaFormatters{examples/closure}
 \addLuaFormatters{examples/format}
 \addLuaFormatters{examples/local-formatters.lua}
-
-% Remaining functionality that is used in the manual
-% but not suitable for listings
 \addLuaFormatters{examples/additionals}
+
 
 \title{\luaformatters}
 \subtitle{v0.8}
@@ -46,12 +46,13 @@ self-documentation, % Create the self-documentation commands
 
 \begin{abstract}
 
-\luaformatters\ is a package for Lua\LaTeX\ designed to assist package
-and document authors with the recurring task of \emph{templating}.  It
-substantially reduces the complexity of interfacing the \LaTeX\ and the Lua
-domains, making it simpler to approach the development of document preambles and
-packages purely in Lua.  At the same time it assists with and encourages a
-modular style of programming templates and styles.
+\luaformatters\ is a package for Lua\LaTeX\ assisting package (and document)
+authors bridging the gap between the \LaTeX\ and the Lua domains.  It allows to
+declare and program “formatters” completely in Lua files and have the
+corresponding \LaTeX\ macros be generated automatically.  This reduces the
+complexity of writing Lua-based packages and encourages (and simplifies) code
+reuse and a modular programming style.
+
 \end{abstract}
 
 %\bigskip
@@ -60,33 +61,32 @@ modular style of programming templates and styles.
 \bigskip
 
 \noindent \NOTE{Disclaimer:} This version of the manual is written for the
-initial release and in a \emph{very} preliminary state. This particularly
-includes the overall structure, which is overly redundant. While it is
-intentional to touch the subjects (usually) twice, with distinct degrees of
-depth, there seems to be some confusion due to the fact that the manual has been
-written in parallel to the package's development, with some feedback loops:
-writing documentation unearthed the need for restructuring the code or the
-interface, which in turn had backward consequences for the manual.
+initial v0.8 release and -- although quite comprehensive -- in a \emph{very}
+preliminary state. This particularly includes the overall structure, which is
+overly redundant and going in loops. While it is intentional to touch the
+subjects more than once at distinct degrees of depth, the structure has suffered
+from the manual having been written in parallel with the package development:
+writing documentation triggered changes and restructuring of the code base,
+which in turn required changes to the documentation.
 
-It is intended to do a thorough review of the manual, but not before approaching
-the first stable release.  Since the issue list includes a number of fundamental
-enhancements and maybe also changes until that milestone it seems more
-reasonable to wait until all the functionality is settled and \emph{then}
-reconsider the outline of the manual.  See
-\url{https://github.com/uliska/luaformatters/issues/37} fur the current state of
-this discussion.
+A full revision of the manual is planned preceding the release of v1.0 beta. The
+issue list requests a number of potentially fundamental enhancements and
+modifications until that point, and it seems reasonable to delay decisions about
+a better manual outline until the interface and functionality have settled to a
+final state.  See \url{https://github.com/uliska/luaformatters/issues/37} for
+the current state of this discussion.
 
 \medskip
 
 \noindent \NOTE{Disclaimer 2:} This package has been renamed from
 \package{luatemplates} to \luaformatters\ shortly before the initial release
-because it has become clear that \emph{formatters} are the actual concern of the
-package.  However, it is possible or even likely that there are remnants of the
-original name and concept scattered throughout the manual, the example files,
-and maybe even the code itself.  This will be fully ironed out by the release
-v1.0, but for now if you encounter anything that is surprisingly named anything
-related to “templates” it has probably been overlooked in the translation
-process.
+because it has become clear that \emph{formatters} are the actual concern and
+perspective of the package.  However, it is possible or even likely that there
+are remnants of the original name and concept scattered throughout the manual,
+the example files, and maybe even the code itself.  This will be fully ironed
+out by the release v1.0, but for now if you encounter anything that is
+surprisingly named anything related to “templates” it has probably been
+overlooked in the translation process.
 
 \newpage
 
@@ -98,56 +98,82 @@ process.
 \let\oldsection\section
 \renewcommand\section{\newpage\oldsection}
 
-Templating is one of the most common techniques applied when writing \LaTeX\
-packages,%
-\footnote{Packages and document preambles are generally considered synonymous in this manual, since it doesn't make a difference with regard to \luaformatters.} %
-especially when Lua is involved which encourages using \LaTeX\ not
-only as a \emph{typesetting} but also as a \emph{document/content generation}
-system.  Very often one takes some data (from macro arguments), processes it
-more or less heavily (ranging from simply \emph{styling} it to taking arguments
-as lookup keys to arbitrarily complex data), and merges it into some kind of
-template to produce the final result being written back to the \LaTeX\ document.
-When I started to regularly make use of that pattern I realized that in every
-case I ended up wanting to concentrate my style and template configuration at a
-central place, which usually became a Lua table in a config file.  Following the
-DRY paradigm and creating a \emph{package} with support for templating seemed
-like a good idea, and watching my configuration and style files shrink to
-extraordinary shortness and clarity during the development process was indeed a
-pretty inspiring experience.  By now the package allows the definition of
-templates and formatter functions in a nearly “declarative” style, while the
-corresponding \LaTeX\ macros are generated automatically. Additionally the
-package provides tools for and encourages using modular approaches to creating
-templates and styles.
+One of the most common tasks when writing \LaTeX\ packages%
+\footnote{This includes packages written for a single document or for public
+release.} %
+is the creation of new macros that perform some sort of \emph{styling} or other
+\emph{processing} of input text or data. Styles can be visually conceived (e.g.
+\mintinline{tex}{\highlight{highlighted text}}) or semantically
+(\mintinline{tex}{\historicPerson{Goethe}}), but macros can also perform complex
+operations like generating a complete table row from a macro like
+\mintinline{tex}{\artDesc{DE-987f}}.  Especially the latter can benefit very
+much from Lua\LaTeX\ that allows writing arbitrarily complex functionality in
+Lua, which for many is much more accessible than \TeX\ programming and which can
+turn \LaTeX\ from a document \emph{typesetting engine} into a \emph{document
+generating system}.
 
-This manual is of course written using \luaformatters, and therefore it is
-strongly recommended to study the sources too, not only the compiled PDF file.
-Depending on the installation type these may be found in different places.  If
-you read this from a \TeX\ Live installation try \texttt{kpsewhich
-luaformatters.tex} and \texttt{kpsewhich luaformatters-manual-config.lua} to get
-their exact location.  Other example files should be located in the same place.
-A number of general and specific example files are listed in
-\vref{sec:examples}, and they are also available as files beside the sources for
-this manual.%
-\footnote{\url{https://github.com/uliska/luaformatters/tree/master/documentation}.%
-\footnote{\textbf{TODO:} Clarify where they end up in TeX Live.}}
+\luaformatters\ simplifies a programming pattern that aims at doing as much work
+as possible in the Lua domain and as little as possible in \LaTeX.  The
+traditional approach for using Lua functionality is creating a macro in \LaTeX,
+passing arguments to a Lua function which then writes the result back to \LaTeX.
+With \luaformatters\ a “formatter” can be declared and/or programmed completely
+in Lua -- as a simple string template or an arbitrarily complex Lua function --
+while \luaformatters\ takes care of generating the \LaTeX\ macro, handles
+passing the arguments (including sophisticated handling of optional arguments)
+to Lua and writing the results back to \LaTeX.
+
+\begin{quote}
+
+This excerpt from a \LaTeX\ document preamble/package:
+
+\begin{minted}{tex}
+\usepackage{luaformatters}
+\addLuaFormatters{my-formatters}
+\end{minted}
+
+\noindent and this \luavar{my-formatters.lua} file:
+
+\begin{minted}{lua}
+local my_formatters = lua_formatters:new('my-package')
+my_formatters:add_formatter('foo', [[\textcolor{red}{<<<text>>>}]])
+function my_formatters.formatters:bar(text, options)
+    if options.reverse then text = text:reverse() end
+    return text
+end
+return my_formatters
+\end{minted}
+
+\noindent are enough to create two macros \mintinline{tex}{\foo{text}} and
+\mintinline{tex}{\bar[options]{text}} to be usable in a document.  For a Minimal
+Working Example see \vref{sec:examples:mwe}.
+
+\end{quote}
+
+\noindent A number of example files are listed in \vref{sec:examples}, including
+the Lua files used for compiling this manual itself.  They are also available
+for closer inspection in the \texttt{documentation} and
+\texttt{documentation/examples} subdirectories of the development repository.%
+\footnote{\url{https://github.com/lualatex-tools/luaformatters/tree/master/documentation}} %
+If \luaformatters\ is installed as part of \TeX\ Live, it should be possible to
+list all files included in the documentation with \texttt{texdoc -l
+luaformatters}.
+
 
 \subsection{Dependencies and Installation}
 \label{sec:dependencies-and-installation}
 
 \luaformatters\ depends on the \package{luaoptions} package%
 \footnote{\url{https://github.com/lualatex-tools/luaoptions}} %
-which at this point is only available from its development repository. \package{luaoptions} has been developed for and part of Jacques Peron's \package{lyluatex} package%
-\footnote{\url{https://github.com/jperon/lyluatex}} %
-but has been extracted as a standalone package to make the option handling
-functionality generally available.  When \luaformatters\ will be released to
-CTAN and eventually hit the \TeX\ distributions we'll make sure the package
-releases are in sync.
+and implicitly on a few standard packages that should be generally available.
+We will make sure that CTAN releases of \luaformatters\ and \package{luaoptions}
+are in sync, but if you intend to use \luaformatters\ from its Github repository
+you should generally do so with \package{luaoptions} as well.
 
 Installation is done the usual way, by making the package's files
 (\texttt{luaformatters.sty} and \texttt{luaformatters.lua} and the
-\texttt{submodules} folder) available to the \textsc{texmf} tree. Note that at
-this point the package can only be used from the Github development repository
-at \url{https://github.com/uliska/luaformatters}.
+\texttt{submodules} folder) available to the \textsc{texmf} tree.  It is
+strongly advised to place the package(s) below \texttt{<texmf>/tex/luatex} (not
+\texttt{latex}) in order to be found before a possible \TeX\ Live installation.
 
 \NOTE{NOTE:} It should go without saying, but better safe than sorry: Since
 this package relies heavily on Lua code it can only be compiled with
@@ -2936,7 +2962,7 @@ end
 \label{sec:examples}
 
 \subsection{Minimal Working Example}
-\label{sec:mwe}
+\label{sec:examples:mwe}
 
 \noindent
 \texttt{luaformatters-mwe-templates.lua} and \texttt{luaformatters-mwe.tex}:
