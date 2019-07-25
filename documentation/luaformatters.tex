@@ -23,16 +23,16 @@ self-documentation, % Create the self-documentation commands
 % The Formatters object will later be globally available to Lua by the name
 % manual_templates and could be adressed as such from any \directlua command.
 % luaformatters-manual-config.lua must be findable by LaTeX.
-\addLuaFormatters{luaformatters-manual-templates}
+\addLuaFormatters{luaformatters-manual}
 
 % The formatters are organized in a modular fashion, distributed over several
 % declaration files.  The purpose in *this document* is to be able to list
 % the following files separately at the end of the manual, but it also shows
 % an approach that can be used for other purposes of modular organization.
-\addLuaFormatters{examples/closure}
-\addLuaFormatters{examples/format}
-\addLuaFormatters{examples/local-formatters.lua}
-\addLuaFormatters{examples/additionals}
+\addLuaFormatters{examples/luaformatters-closure}
+\addLuaFormatters{examples/luaformatters-format}
+\addLuaFormatters{examples/luaformatters-local-formatters.lua}
+\addLuaFormatters{examples/luaformatters-additionals}
 
 
 \title{\luaformatters}
@@ -2951,9 +2951,9 @@ end
 \label{sec:examples:mwe}
 
 \noindent
-\texttt{luaformatters-mwe-templates.lua} and \texttt{luaformatters-mwe.tex}:
+\texttt{luaformatters-mwe.lua} and \texttt{luaformatters-mwe.tex}:
 
-\inputminted{lua}{examples/luaformatters-mwe-templates.lua}
+\inputminted{lua}{examples/luaformatters-mwe.lua}
 
 \hrule
 
@@ -2975,7 +2975,7 @@ achieve this goal it is obviously less cleanly structured than a real-world file
 would be, and it is planned to add further example files demonstrating
 particular techniques and approaches.
 
-\inputminted[firstline=11]{lua}{luaformatters-manual-templates.lua}
+\inputminted[firstline=11]{lua}{luaformatters-manual.lua}
 
 \enlargethispage*{4\baselineskip}
 
@@ -2984,7 +2984,7 @@ particular techniques and approaches.
 
 The following file is copied from a real-world example to demonstrate a number of techniques.  Note that \emph{all} of the project's dedicated macros have been concentrated in this Lua file, but note also that it will probably not be directly usable outside of that context.
 
-\inputminted{lua}{examples/schubert-templates.lua}
+\inputminted{lua}{examples/luaformatters-schubert.lua}
 
 
 \subsection{Specific Examples}
@@ -3001,15 +3001,15 @@ subdirectory of the repository.
 \subsubsection{Using Formatters}
 \label{sec:examples:using-formatters}
 
-\inputminted{lua}{examples/format.lua}
+\inputminted{lua}{examples/luaformatters-format.lua}
 
 
 \subsubsection{Local Formatters}
 \label{sec:examples:local-formatters}
 
-\inputminted{lua}{examples/local-formatters.lua}
+\inputminted{lua}{examples/luaformatters-local-formatters.lua}
 
-\inputminted{tex}{examples/local-formatters.tex}
+\inputminted{tex}{examples/luaformatters-local-formatters.tex}
 
 
 \subsubsection{Closures}
@@ -3017,23 +3017,23 @@ subdirectory of the repository.
 
 This is in its essence not a \luaformatters\ demonstration but rather a Lua idiom, but it perfectly illustrates how the package makes it easy to exploit programming in a language like Lua.
 
-The file \texttt{examples/closures.lua} is made available to \texttt{luaformatters.tex} by adding
+The file \texttt{examples/luaformatters-closures.lua} is made available to \texttt{luaformatters.tex} by adding
 
 \begin{minted}{tex}
-\addLuaFormatters{examples/closures.lua}
+\addLuaFormatters{examples/luaformatters-closures.lua}
 \end{minted}
 
 \noindent to the document preamble after loading the main \term{Formatters
 Table}.  Basically this is done for all further examples.
 
-\inputminted{lua}{examples/closure.lua}
+\inputminted{lua}{examples/luaformatters-closure.lua}
 
 
 \subsubsection{Validating the Optional Argument}
 \label{sec:examples:validating-optional-argument}
 
-\inputminted{lua}{examples/validate-options.lua}
+\inputminted{lua}{examples/luaformatters-validate-options.lua}
 
-\inputminted{tex}{examples/validate-options.tex}
+\inputminted{tex}{examples/luaformatters-validate-options.tex}
 
 \end{document}
