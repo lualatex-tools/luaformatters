@@ -18,15 +18,6 @@ local err, warn, info, log = luatexbase.provides_module({
     be stored in Formatters._formatters[<client_name>].
     The pseudo-client `builtin` will be registered in the first place,
     before any real client gets the chance.
-
-    Each client table will get Formatters set as its metatable, so
-    any code in a client's toplevel table can use `self` to access fields
-    both from itself and from Formatters.
-
-    Each declared formatter will be wrapped in a Formatter object.
-    Formatter's __index function will look for missing fields in the
-    Formatters table, in the “parent” client, in Formatters, and in the
-    “parent”'s formatters subtable.
 --]]
 local Formatters = {
     _formatters = {},
@@ -40,10 +31,10 @@ _G['lua_formatters'] = Formatters
 local formatters_opts = lua_options.client('formatters')
 
 -- Load supporting modules
-local Formatter = require('luaformatters-formatter')
-local FormattersTable = require('luaformatters-templatestable')
+local Formatter = require('submodules.luaformatters-formatter')
+local FormattersTable = require('submodules.luaformatters-templatestable')
 -- load supporter functions and hook them into the Formatters table.
-for k, v in pairs(require('luaformatters-support')) do
+for k, v in pairs(require('submodules.luaformatters-support')) do
     Formatters[k] = v
 end
 
