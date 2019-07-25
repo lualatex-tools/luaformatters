@@ -1,0 +1,14 @@
+luaformatters README for TeX Live
+=================================
+
+* The files
+  - luaformatters.lua
+  - submodules/*.lua
+  must be findable in the search path and probably
+  be placed below tex/lualatex.
+* The .lua files in the documentation and
+  documentation/examples directories should be stored
+  together with the documentation in the doc subtree
+  and *not* moved somewhere else, because they are used
+  as listings in the manual and have to be reached through
+  relative paths.
