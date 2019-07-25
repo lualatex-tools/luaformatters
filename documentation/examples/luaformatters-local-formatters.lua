@@ -2,7 +2,7 @@
     Handling of “local” formatters
 --]]
 
-local LOCALS = lua_formatters:new{
+local LOCALS = lua_formatters:new_client{
     name = 'locals',
     namespace = { 'tool' }
 }

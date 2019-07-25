@@ -1,4 +1,4 @@
-local MWE = lua_formatters:new('mwe')
+local MWE = lua_formatters:new_client('mwe')
 
 function MWE.formatters:XXX(text)
     return text:gsub('.', 'X')

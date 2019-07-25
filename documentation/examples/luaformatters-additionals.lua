@@ -3,7 +3,7 @@
     in the manual but not specifically demonstrated as examples.
 --]]
 
-local ADDITIONALS = lua_formatters:new('additionals')
+local ADDITIONALS = lua_formatters:new_client('additionals')
 
 ADDITIONALS.formatters = {
     argument = {

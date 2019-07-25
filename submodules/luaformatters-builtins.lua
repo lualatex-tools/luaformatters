@@ -33,7 +33,7 @@ local err, warn, info, log = luatexbase.provides_module({
 --]]
 local Formatters = {}
 
-local BUILTINS = lua_formatters:new{
+local BUILTINS = lua_formatters:new_client{
     name = 'builtins',
     formatters = Formatters,
     docstrings = {}

@@ -137,7 +137,7 @@ This excerpt from a \LaTeX\ document preamble/package:
 \noindent and this \luavar{my-formatters.lua} file:
 
 \begin{minted}{lua}
-local my_formatters = lua_formatters:new('my-package')
+local my_formatters = lua_formatters:new_client('my-package')
 my_formatters:add_formatter('foo', [[\textcolor{red}{<<<text>>>}]])
 function my_formatters.formatters:bar(text, options)
     if options.reverse then text = text:reverse() end
@@ -753,15 +753,15 @@ in the Lua file whose name is passed to \mintinline{tex}{\addLuaFormatters{}}.
 
 In order to be registered as a \term{Client} a table must be an instance of the
 \luavar{FormattersTable} class and eventually returned as a module.  Such an object is instantiated by calling the factory
-function \mintinline{lua}{lua_formatters:new()}.  In its most basic form this would look like this:
+function \mintinline{lua}{lua_formatters:new_client()}.  In its most basic form this would look like this:
 
 \begin{minted}{lua}
-local MANUAL = lua_formatters:new('manual')
+local MANUAL = lua_formatters:new_client('manual')
 -- defining the contents of the Formatters Table
 return MANUAL
 \end{minted}
 
-\noindent When the argument to \mintinline{lua}{lua_formatters:new()} is a string
+\noindent When the argument to \mintinline{lua}{lua_formatters:new_client()} is a string
 this is taken as the \term{Template Table}'s name.  This name must be unique
 across all \term[Client]{Clients} that are loaded in the current document, which
 should especially be a concern for \emph{package} authors while the issue seems
@@ -778,7 +778,7 @@ have is \luavar{name}, and the following invocation is equivalent to the
 previous example:
 
 \begin{minted}{lua}
-local MANUAL = lua_formatters:new{
+local MANUAL = lua_formatters:new_client{
 	name = 'manual'
 }
 \end{minted}
@@ -796,7 +796,7 @@ when writing \emph{packages}.  If this field is set to \luavar{ltx} a macro
 would for example be named \cmd{ltxBookName} instead of \cmd{bookName}.
 
 \begin{minted}{lua}
-local MANUAL = lua_formatters:new{
+local MANUAL = lua_formatters:new_client{
 	name = 'manual',
 	prefix = 'ltx',
 }
@@ -811,7 +811,7 @@ actively supported, but it is intended to be used in the self-documentation
 features (\vref{sec:self-documentation}).
 
 \begin{minted}{lua}
-local MANUAL = lua_formatters:new{
+local MANUAL = lua_formatters:new_client{
 	name = 'manual',
 	display_name = 'luaformatters Manual',
 }
@@ -831,7 +831,7 @@ nodes. Note that this can be at the same time convenient, especially for complex
 namespaces, but it can also lead to unnoticed typos.
 
 \begin{minted}{lua}
-local MANUAL = lua_formatters:new{
+local MANUAL = lua_formatters:new_client{
 	name = 'manual',
 	strict = false,
 }
@@ -844,7 +844,7 @@ field is either a single string or an array of strings, each specifying a “key
 in Lua-style dot notation:
 
 \begin{minted}{lua}
-local MANUAL = lua_formatters:new{
+local MANUAL = lua_formatters:new_client{
 	name = 'manual',
 	namespace = 'music.composer',
 	-- or
@@ -888,7 +888,7 @@ and pass it to the factory function with the sole purpose of converting it to a
 configuration file with something like
 
 \begin{minted}{lua}
-return lua_formatters:new(MANUAL)
+return lua_formatters:new_client(MANUAL)
 \end{minted}
 
 \noindent in which case a manually composed table \luavar{MANUAL} would only at
@@ -2571,7 +2571,7 @@ and the internal name are considered.
 
 The \luavar{FormattersTable} class is the basic entity a package author is
 confronted with: one \term{Client} is defined within one \term{Formatters Table},
-instantiated with \mintinline{lua}{lua_formatters:new(<name>)} (or a table as
+instantiated with \mintinline{lua}{lua_formatters:new_client(<name>)} (or a table as
 argument).  It can be given a few properties (see
 \vref{sec:usage:templates-table}), and the \luavar{formatters} (mandatory) and
 \luavar{configuration} (optional) subtables have to be populated with formatter

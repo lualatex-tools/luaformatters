@@ -17,7 +17,7 @@ local err, warn, info, log = luatexbase.provides_module({
 
 -- Create a new FormattersTable instance by referencing the global
 -- `lua_formatters` variable
-local MANUAL = lua_formatters:new('manual')
+local MANUAL = lua_formatters:new_client('manual')
 
 -- Add formatters, grouped by category.
 -- (Note that the first string does have no meaning, it's just a comment)

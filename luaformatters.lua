@@ -44,7 +44,7 @@ end
     within formatter functions.
 --]]
 
-function Formatters:new(properties)
+function Formatters:new_client(properties)
     return FormattersTable:new(properties)
 end
 

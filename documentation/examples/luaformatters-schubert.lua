@@ -18,7 +18,7 @@ local err, warn, info, log = luatexbase.provides_module({
 
 local lfs = require 'lfs'
 
-local SCHUBERT = lua_formatters:new{
+local SCHUBERT = lua_formatters:new_client{
     name = 'diss',
     namespace = {
         'abb',

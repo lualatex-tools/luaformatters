@@ -1,4 +1,4 @@
-local FORMAT = lua_formatters:new('format')
+local FORMAT = lua_formatters:new_client('format')
 
 --[[
     Use self:format() to reuse formatters defined in the same

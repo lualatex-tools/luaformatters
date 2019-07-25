@@ -5,7 +5,7 @@
     argument.
 --]]
 
-local VALIDATION = lua_formatters:new{
+local VALIDATION = lua_formatters:new_client{
     name = 'form',
 }
 

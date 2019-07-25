@@ -4,7 +4,7 @@
     is formatted differently than subsequent ones.
 --]]
 
-local CLOSURE = lua_formatters:new('closure')
+local CLOSURE = lua_formatters:new_client('closure')
 
 local function term()
 --[[
