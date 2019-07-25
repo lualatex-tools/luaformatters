@@ -49,3 +49,5 @@ luac.out
 *.fdb_latexmk
 *.fls
 *.synctex.gz
+
+CTAN/*
