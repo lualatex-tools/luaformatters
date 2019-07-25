@@ -1,0 +1,33 @@
+#!/bin/bash
+
+# Prepare a CTAN release for the luaformatters package
+echo "Packaging luaformatters for CTAN release"
+TARGET=CTAN/luaformatters
+
+echo "Clean up the repository"
+git clean -fXd
+
+echo "Build the manual"
+cd documentation
+latexmk
+cd ..
+
+echo "Prepare the target directories"
+mkdir -p $TARGET
+rm CTAN/*
+rm -rf $TARGET/*
+
+echo "Copy toplevel files"
+cp -a LICENSE luaformatters.* README.md README-texlive submodules $TARGET
+
+echo "Copy documentation files"
+mkdir -p $TARGET/documentation/examples
+cd documentation
+cp -a README.md luaformatters*.tex luaformatters*.sty luaformatters*.lua \
+latexmkrc media ../$TARGET/documentation
+# Copy documentation examples
+cp -a examples/*.lua examples/*.tex ../$TARGET/documentation/examples
+
+echo "Package the result"
+cd ../CTAN
+zip -r luaformatters luaformatters
