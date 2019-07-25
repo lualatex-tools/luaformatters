@@ -116,11 +116,14 @@ generating system}.
 as possible in the Lua domain and as little as possible in \LaTeX.  The
 traditional approach for using Lua functionality is creating a macro in \LaTeX,
 passing arguments to a Lua function which then writes the result back to \LaTeX.
-With \luaformatters\ a “formatter” can be declared and/or programmed completely
-in Lua -- as a simple string template or an arbitrarily complex Lua function --
-while \luaformatters\ takes care of generating the \LaTeX\ macro, handles
-passing the arguments (including sophisticated handling of optional arguments)
-to Lua and writing the results back to \LaTeX.
+While this works and is very flexible it can be cumbersome to handle the passing
+of data from \LaTeX\ to Lua and back over and over again for every macro,
+leading to redundant and somewhat cluttered code. With \luaformatters\ a
+“formatter” can be declared and/or programmed completely in Lua -- as a simple
+string template or an arbitrarily complex Lua function -- while \luaformatters\
+takes care of generating the \LaTeX\ macro, handles passing the arguments
+(including sophisticated handling of optional arguments) to Lua and writing the
+results back to \LaTeX.
 
 \begin{quote}
 
@@ -191,8 +194,9 @@ has to be loaded:
 \usepackage{luaformatters}
 \end{minted}
 
-\noindent Once the package is loaded a global Lua variable \luaformatters\ is
-available, which is referred to as the \term{Formatters Library}.%
+\noindent Once the package is loaded a global Lua variable
+\luavar{lua\_formatters} is available, which is referred to as the
+\term{Formatters Library}.%
 \footnote{This variable references the \luavar{Formatters} table defined in the
 package's Lua file.  Usually it will not be necessary to access this directly,
 rather it is used for the operation of the automatically generated \LaTeX\
@@ -249,8 +253,10 @@ file \texttt{luaformatters.tex} looks like this:
 \usepackage[color,self-documentation]{luaformatters}
 
 \addLuaFormatters{luaformatters-manual-templates}
-\addLuaFormatters{examples/closure}
-\addLuaFormatters{examples/additionals}
+\addLuaFormatters{examples/luaformatters-closure}
+\addLuaFormatters{examples/luaformatters-format}
+\addLuaFormatters{examples/luaformatters-local-formatters.lua}
+\addLuaFormatters{examples/luaformatters-additionals}
 \end{minted}
 
 
