@@ -821,17 +821,19 @@ After these examples it would be possible to add formatters at
 \luavar{music.composer.name} or \luavar{literature.publisher.location}, but not
 \luavar{theater.city}.
 
-\subsubsection[Content]{\luavar{formatters}, \luavar{configuration} -- Content}
+\subsubsection[Content]{\luavar{formatters}, \luavar{\_local}, \luavar{configuration} -- Content}
 
 In addition to the \emph{configuration} options documented above it is also
-possible to add one or both of two “content” subtables, \luavar{formatters} and
-\luavar{configuration}.  While there are no serious arguments to be made against
-this approach it is not exactly recommended for general use, because it somewhat
-goes against the idea of \luaformatters. But it should not be omitted
-that it is perfectly \emph{possible} to prepare a complete configuration table
-and pass it to the factory function with the sole purpose of converting it to a
-\luavar{FormattersTable} instance. In fact it is possible to finish the
-configuration file with something like
+possible to add one or more of three “content” subtables, \luavar{formatters},
+\luavar{\_local} and \luavar{configuration}.  The \luavar{formatters} subtable
+holds regular formtters, \luavar{\_local} local formatters, and
+\luavar{configuration} additional configuration entries. While there are no
+serious arguments to be made against this approach it is not exactly recommended
+for general use, because it somewhat goes against the idea of \luaformatters.
+But it should not be omitted that it is perfectly \emph{possible} to prepare a
+complete configuration table and pass it to the factory function with the sole
+purpose of converting it to a \luavar{FormattersTable} instance. In fact it is
+possible to finish the configuration file with something like
 
 \begin{minted}{lua}
 return lua_formatters:new_client(MANUAL)
@@ -846,9 +848,14 @@ available that way.
 \subsection{Registering the Client}
 \label{sec:usage-registering-the-client}
 
-As was briefly mentioned in the introduction the \term{Template Table} has to be registered as a \term{Client} to the \term{Formatters Library}.  At that point all the declared formatters are processed and the \LaTeX\ macros created.  The “canonical” way of doing this is to have the configuration file return the \luavar{FormattersTable} instance and passing that file's name/path  to the \LaTeX\ macro \mintinline{tex}{\addLuaFormatters{<filename>}}.
+As was briefly mentioned in the introduction the \term{Template Table} has to be
+registered as a \term{Client} to the \term{Formatters Library}.  At that point
+all the declared formatters are processed and the \LaTeX\ macros created.  The
+“canonical” way of doing this is to have the configuration file return the
+\luavar{FormattersTable} instance and passing that file's name/path  to the
+\LaTeX\ macro \mintinline{tex}{\addLuaFormatters{<filename>}}.
 
-But the same can acutally be achieved while staying in the Lua domain.
+But the same can actually be achieved while staying in the Lua domain.
 Internally the \LaTeX\ macro calls \luavar{lua\_formatters:add()}, and this can
 equally be done explicitly from the Lua file.  Assuming \luavar{MANUAL} being a
 valid \luavar{FormattersTable} instance
@@ -910,14 +917,21 @@ MANUAL:add_formatter('music.composer.century', [[(Ct: <<<century>>>)]])
 
 \paragraph{\luavar{add\_formatters}}
 
-This function declares \emph{multiple} formatters in the same position of the namespace.  It can be used in three different ways, depending on the given arguments: zero, one or two strings, with a mandatory table in the last position.
+This function declares \emph{multiple} formatters in the same position of the
+namespace.  It can be used in three different ways, depending on the given
+arguments: zero, one or two strings, with a mandatory table in the last
+position.
 
 If \emph{one} string is given it is simply ignored and considered a
 \emph{comment}. The idea behind this uncommon behaviour is to use this function
 as a means of structuring the configuration file and adding formatters in
 semantically coherent \emph{groups}.
 
-If \emph{two} strings are given the second string specifies the namespace \emph{key} below which the new formatters should be added.  As before, the behaviour in case of a key that doesn't yet exist is controlled by the \luavar{strict} option.  If a second string is \emph{not} given (or no string argument at all) the formatters are added to the top level.
+If \emph{two} strings are given the second string specifies the namespace
+\emph{key} below which the new formatters should be added.  As before, the
+behaviour in case of a key that doesn't yet exist is controlled by the
+\luavar{strict} option.  If a second string is \emph{not} given (or no string
+argument at all) the formatters are added to the top level.
 
 The final argument is a -- possibly nested -- table specifying multiple
 formatters.
@@ -942,7 +956,10 @@ MANUAL:add_formatters('Composers', 'music.composers, '{
 
 \paragraph{Standalone function declaration}
 
-\emph{Functions} can be added through the two methods described above as well, but often it is more practical to use the regular “standalone” syntax to define them.  It is possible to add functions in the \luavar{formatters} subtable of the \term{Formatters Table}:
+\emph{Lua Functions} can be added with the two functions described above as
+well, but often it is more practical to use Lua's regular “standalone” syntax to
+define them.  It is possible to add functions in the \luavar{formatters}
+subtable of the \term{Formatters Table}:
 
 \begin{minted}{lua}
 function MANUAL.formatters.music.composers:abbr_name(text)
@@ -952,7 +969,9 @@ end
 \end{minted}
 
 \noindent However, note that it is necessary that the parent node
-(\luavar{(formatters.)music.composers} in this example) already exists.
+(\luavar{(formatters.)music.composers} in this example) already exists.  Also,
+this way none of the additional fields of a \term{Formatter Entry Table} can be
+set directly and would have to be provided through explicit configuration later.
 
 
 \subsubsection{Adding Local Formatters}
@@ -1528,10 +1547,10 @@ following forces the height to 1\,\emph{em}:
 GIMP, \url{https://commons.wikimedia.org/w/index.php?curid=80930}}
 
 
-\subsubsection{Formatters}
+\subsubsection{Templates}
 \label{sec:templates-templates}
 
-\emph{templates} in \luaformatters's terminology are template strings
+\term[Template]{Templates} in \luaformatters's terminology are template strings
 with more than one mandatory replacement field.  In order to create \LaTeX\
 macros for such templates it is necessary to provide an array with argument
 names in the formatter entry table's \luavar{args} field (a failure to do so
