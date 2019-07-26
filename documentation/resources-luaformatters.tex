@@ -1,0 +1,118 @@
+
+% This is the manual for the luaformatters package.
+% Along with the files
+% - luaformatters-manual-templates.lua
+% - examples/*.lua and examples/*.tex
+% - luaformatters-manual-config-mwe.lua
+% the source itself serves as documentation to the package,
+% its use and programming.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass[12pt]{scrartcl}
+\usepackage{luaformattersmanual}
+
+% Use or require the `luaformatters` package with (some of the) options
+% NOTE: option self-documentation implicitly loads minted, so that doesn't
+% have to be included explicitly for the writing of this document.
+\usepackage[
+color,              % use colors
+self-documentation, % Create the self-documentation commands
+]{luaformatters}
+
+% Set up the Formatters object, passing a configuration file name.
+% The Formatters object will later be globally available to Lua by the name
+% manual_templates and could be adressed as such from any \directlua command.
+% luaformatters-manual-config.lua must be findable by LaTeX.
+\addLuaFormatters{luaformatters-manual}
+
+% The formatters are organized in a modular fashion, distributed over several
+% declaration files.  The purpose in *this document* is to be able to list
+% the following files separately at the end of the manual, but it also shows
+% an approach that can be used for other purposes of modular organization.
+\addLuaFormatters{examples/luaformatters-closure}
+\addLuaFormatters{examples/luaformatters-format}
+\addLuaFormatters{examples/luaformatters-local-formatters.lua}
+\addLuaFormatters{examples/luaformatters-additionals}
+
+
+\title{\luaformatters\ -- Manual Materials}
+\subtitle{v0.8}
+\author{Urs Liska}
+\date{\HEADdate}
+
+\begin{document}
+
+\maketitle
+
+\section{Stuff for possible reuse}
+
+\subsubsection{Creating Macros}
+\label{sec:intro-creating-macros}
+
+\section{Stuff likely to be thrown out}
+
+\subsection{A First Glimpse / The Big Idea}
+\label{sec:a-first-glimpse}
+
+When writing packages specifically for Lua\LaTeX, one typically wants to work as
+much as possible in the Lua domain, doing things in plain \LaTeX\ only when
+necessary.  One common idiom in this context is to get the data from the \TeX\
+to the Lua domain as quickly as possible, process it there and only write the
+final result back to the \TeX\ document.  However, this can involve significant
+overhead that is not always worth the effort and can leave the code in a
+confusing mix of \LaTeX\ and Lua.  A useful approach is to prepare all coding in
+a Lua module and provide \LaTeX\ macros that basically serve as mere
+\emph{interfaces} to that infrastructure.  The basic idea of this package is to
+make this process as automatic and painless as possible by providing tools to
+\emph{declare} \term{Formatters} (string templates and formatter functions) in
+one Lua table and have them exposed as \LaTeX\ macros mostly automatically.  The
+following excerpt from a Lua configuration file%
+\footnote{Throughout this manual examples will use the variable \luavar{MANUAL},
+	which is the actual variable used in the configuration file for this manual,
+	which is also listed in \vref{sec:examples:manual-templates}.}% :
+
+\begin{minted}{lua}
+MANUAL:add_formatter('cmd', [[\textbf{\textbackslash <<<name>>>}]])
+\end{minted}
+
+\noindent will automatically create a command \luaMacroDocInline{cmd} with one
+mandatory argument that can be used in the \LaTeX\ document like this:
+\luaMacroDocInline[demo,args=usepackage]{cmd} (and is so throughout this
+document) without any further set-up work.  And a Lua function
+
+\label{code:function}
+\begin{minted}{lua}
+function MANUAL.formatters:reverse(text, options)
+local result = text:reverse()
+if options.upper then
+result = result:upper()
+end
+return result
+end
+\end{minted}
+
+\noindent will create a macro \luaMacroDocInline{reverse} with an optional
+argument that can be used like
+
+\luaMacroDoc[demo,nocomment,%
+demosep=\par\noindent producing ,%
+args={upper,The brown fox}]{reverse}%
+in the output.  There are four things to highlight at this point, which are
+detailed further in the following sections of the manual:
+
+\begin{itemize*}
+	\item The handling of optional and mandatory arguments for the \LaTeX\ macro is
+	done automatically, inferring the details directly from the Lua function's signature, and also from string templates when possible.
+	\item Through the use of \package{lyluatexoptions} the handling of optional
+	\texttt{key=value} arguments has become incredibly simple.  With some more
+	administrative effort (setting up one's own options instance) their keys and
+	values can even be validated.
+	\item The package provides helper functions and encourages to go forward with
+	this approach to follow modular design principles.
+	\item Output can be colored automatically and conditionally, without having to
+	hard-code coloring into the macros. This can equally be used to actually create
+	colored output and to use coloring as a visual checker for correct entry.
+\end{itemize*}
+
+
+\end{document}
