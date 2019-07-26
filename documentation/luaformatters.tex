@@ -95,73 +95,56 @@ overlooked in the translation process.
 
 \section{Introduction}
 
-% Remaining \sections should start on new pages.
-\let\oldsection\section
-\renewcommand\section{\newpage\oldsection}
+\enlargethispage*{\baselineskip}
 
 One of the most common tasks when writing \LaTeX\ packages%
 \footnote{This includes packages written for a single document or for public
-release.} %
+	release.} %
 is the creation of new macros that perform some sort of \emph{styling} or other
 \emph{processing} of input text or data. Styles can be visually conceived (e.g.
-\mintinline{tex}{\highlight{highlighted text}}) or semantically
+\mintinline{tex}{\shaded{highlighted text}}) or semantically
 (\mintinline{tex}{\historicPerson{Goethe}}), but macros can also perform complex
-operations like generating a complete table row from a macro like
-\mintinline{tex}{\artDesc{DE-987f}}.  Especially the latter can benefit very
-much from Lua\LaTeX\ that allows writing arbitrarily complex functionality in
-Lua, which for many is much more accessible than \TeX\ programming and which can
-turn \LaTeX\ from a document \emph{typesetting engine} into a \emph{document
-generating system}.
+operations like generating a table row from a macro like
+\mintinline{tex}{\EAN[quantity=15,price=12.95]{0075678164125}}.  Especially the
+latter can benefit very much from Lua\LaTeX\ that allows writing arbitrarily
+complex functionality in Lua, which for many is much more accessible than \TeX\
+programming and which can turn \LaTeX\ from a document \emph{typesetting engine}
+into a \emph{document generating system}.
 
 \luaformatters\ simplifies a programming pattern that aims at doing as much work
 as possible in the Lua domain and as little as possible in \LaTeX.  The
 traditional approach for using Lua functionality is creating a macro in \LaTeX,
 passing arguments to a Lua function which then writes the result back to \LaTeX.
-While this works and is very flexible it can be cumbersome to handle the passing
-of data from \LaTeX\ to Lua and back over and over again for every macro,
-leading to redundant and somewhat cluttered code. With \luaformatters\ a
-“formatter” can be declared and/or programmed completely in Lua -- as a simple
-string template or an arbitrarily complex Lua function -- while \luaformatters\
-takes care of generating the \LaTeX\ macro, handles passing the arguments
-(including sophisticated handling of optional arguments) to Lua and writing the
-results back to \LaTeX.
+The \LaTeX\ macro serves as a mere \emph{interface} to the Lua code i this
+arrangement. While this works and is very flexible it can be cumbersome to
+handle the passing of data from \LaTeX\ to Lua and back over and over again for
+every macro, leading to redundant and somewhat cluttered code. With
+\luaformatters\ a “formatter” can be declared and/or programmed completely in
+Lua -- as a simple string template or an arbitrarily complex Lua function --
+while \luaformatters\ takes care of generating the \LaTeX\ macro, handles
+passing the arguments (including sophisticated handling of optional arguments)
+to Lua and writing the results back to \LaTeX.
 
 \begin{quote}
 
-This excerpt from a \LaTeX\ document preamble/package:
+--- This \LaTeX\ document:
 
-\begin{minted}{tex}
-\usepackage{luaformatters}
-\addLuaFormatters{my-formatters}
-\end{minted}
+\inputminted{tex}{examples/luaformatters-mwe.tex}
 
-\noindent and this \luavar{my-formatters.lua} file:
+\noindent --- and this \luavar{luaformatters-mwe.lua} file:
 
-\begin{minted}{lua}
-local my_formatters = lua_formatters:new_client('my-package')
-my_formatters:add_formatter('foo', [[\textcolor{red}{<<<text>>>}]])
-function my_formatters.formatters:bar(text, options)
-    if options.reverse then text = text:reverse() end
-    return text
-end
-return my_formatters
-\end{minted}
-
-\noindent are enough to create two macros \mintinline{tex}{\foo{text}} and
-\mintinline{tex}{\bar[options]{text}} to be usable in a document.  For a Minimal
-Working Example see \vref{sec:examples:mwe}.
+\inputminted{lua}{examples/luaformatters-mwe.lua}
 
 \end{quote}
 
-\noindent A number of example files are listed in \vref{sec:examples}, including
-the Lua files used for compiling this manual itself.  They are also available
+\noindent are enough to create two macros \luaMacroDocInline[demo,args=red]{red}
+and \luaMacroDocInline[demo,args={reverse,Reverse}]{optReverse} to be usable in
+a document.  For more examples see \vref{sec:examples}.  They are also available
 for closer inspection in the \texttt{documentation} and
-\texttt{documentation/examples} subdirectories of the development repository.%
+\texttt{documentation/examples} subdirectories of the development repository%
 \footnote{\url{https://github.com/lualatex-tools/luaformatters/tree/master/documentation}} %
-If \luaformatters\ is installed as part of \TeX\ Live, it should be possible to
-list all files included in the documentation with \texttt{texdoc -l
-luaformatters}.
-
+or the CTAN package.%
+\footnote{\url{http://ctan.org/pkg/luaformatters}}
 
 \subsection{Dependencies and Installation}
 \label{sec:dependencies-and-installation}

@@ -28,6 +28,10 @@
 %% End general includes
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% \sections should start on new pages.
+\let\oldsection\section
+\renewcommand\section{\newpage\oldsection}
+
 \newcommand{\HEADdate}{
 	\directlua{
 		local PC = string.char(37)
