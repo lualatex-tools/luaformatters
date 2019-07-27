@@ -71,30 +71,30 @@ SCHUBERT:add_formatters('Styles', {
 
 SCHUBERT:add_formatters('Formatters', {
     partref = {
-        comment = 'Reference to a section in another bookpart',
-        f       = [[\cref{<<<part>>>}, \vref{<<<reference>>>}]],
-        args    = { 'part', 'reference' }
+        comment  = 'Reference to a section in another bookpart',
+        template = [[\cref{<<<part>>>}, \vref{<<<reference>>>}]],
+        args     = { 'part', 'reference' }
     },
     partrefrange = {
-        comment = 'Reference to a range in another bookpart',
-        f       = [[\cref{<<<part>>>}, \vrefrange{<<<from>>>}{<<<to>>>}]],
-        args    = { 'part', 'from', 'to' }
+        comment  = 'Reference to a range in another bookpart',
+        template = [[\cref{<<<part>>>}, \vrefrange{<<<from>>>}{<<<to>>>}]],
+        args     = { 'part', 'from', 'to' }
     },
     todo = {
-        comment = 'Configurable TODO item',
-        f       = [[\textcolor{red}%
+        comment  = 'Configurable TODO item',
+        template = [[\textcolor{red}%
 {\textbf{\textsf{[<<<options>>>] <<<anmerkung>>>}}}]],
-        opt     = 'TODO: ',
+        opt      = 'TODO: ',
     },
     xmpref = {
-        comment = [[Reference to a music example on potentially multiple pages]],
-        f       = [[
+        comment  = [[Reference to a music example on potentially multiple pages]],
+        template = [[
 \cref{xmp:<<<key>>>}
 \vpagerefrange{xmp:start-<<<key>>>}{xmp:<<<key>>>}]],
     },
     Xmpref = {
-        comment = "Reference to a potentially multipage music example.",
-        f       = [[
+        comment  = "Reference to a potentially multipage music example.",
+        template = [[
         \inputminted{lua}{examples/local-formatters.lua}
 \Cref{xmp:<<<key>>>}
 \vpagerefrange{xmp:start-<<<key>>>}{xmp:<<<key>>>}]],
@@ -317,7 +317,7 @@ end
 
 
 --[[
-    
+
 --]]
 
 

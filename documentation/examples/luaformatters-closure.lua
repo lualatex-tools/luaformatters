@@ -38,7 +38,7 @@ end
 
 CLOSURE:add_formatter('term', {
     -- here the *return value* of the local function `term()` is attached
-    f = term(),
+    func = term(),
     comment = 'A specific term or name',
 })
 

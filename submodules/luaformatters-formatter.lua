@@ -46,8 +46,10 @@ function Formatter:new(parent, key, formatter)
     those fields that are ready to have them at this point.
     A *new* table is created while the original formatter is not changed.
 --]]
-    if type(formatter) == 'string' or type(formatter) == 'function' then
-        formatter = { f = formatter }
+    if type(formatter) == 'string' then
+        formatter = { template = formatter }
+    elseif type(formatter) == 'function' then
+        formatter = { func = formatter }
     end
     local o = {
         -- flag to discern from primitive Formatter Entry Table
@@ -82,9 +84,7 @@ function Formatter:apply(...)
     This means that within a formatter the `options` argument is already
     parsed and (optionally) validated.
 --]]
-    if type(self._f) == 'string' then
-        return self:_apply_template(...)
-    else
+    if self._func then
         local args = { ... }
         local opt_index = self:has_options()
         if opt_index then
@@ -92,7 +92,9 @@ function Formatter:apply(...)
             options = self:check_options(options)
             table.insert(args, opt_index, options)
         end
-        return self:_f(unpack(args))
+        return self:_func(unpack(args))
+    else
+        return self:_apply_template(...)
     end
 end
 
@@ -272,7 +274,7 @@ function Formatter:fields()
             self._fields = {}
             local _result = {}
             local i = 0
-            local template = self._f
+            local template = self:template()
             if template:find('options') then
                 self._opt_index = 1
                 table.insert(self._fields, 'options')
@@ -318,14 +320,15 @@ function Formatter:is_formatter(obj)
     return
     type(obj) == 'string'
     or type(obj) == 'function'
-    or (type(obj) == 'table' and (obj._f or obj.f))
+    or (type(obj) == 'table'
+        and (obj._func or obj.func or obj._template or obj.template))
 end
 
 function Formatter:is_func()
 --[[
     Return true if the formatter is function-based, false if template-based.
 --]]
-    return type(self._f) == 'function'
+    return self._func ~= nil
 end
 
 function Formatter:is_hidden()
@@ -388,6 +391,13 @@ function Formatter:set_parent(parent)
     self._parent = parent
 end
 
+function Formatter:template()
+--[[
+    Return the string template if present, or nil
+--]]
+    return self._template
+end
+
 function Formatter:update(properties)
     -- assign all configuration parameters to the formatter entry
     for k, v in pairs(properties) do
@@ -418,7 +428,7 @@ function Formatter:_apply_template(...)
 --]]
     -- first set up the replacement table
     local args = { ... }
-    if #args == 0 then return self._f end
+    if #args == 0 then return self:template() end
     local data
     local first = table.remove(args, 1)
 
@@ -433,7 +443,7 @@ Template:
 %s
 Replacement:
 %s
-]], self._f, first)
+]], self:template(), first)
             return template
         elseif #field > 1 then
             warn([[
@@ -444,7 +454,7 @@ Template:
 %s
 Replacement:
 %s
-]], self._f, first)
+]], self:template(), first)
         end
         data = { [field[1]] = first }
     elseif #first == 0 then
@@ -459,7 +469,7 @@ Replacement:
         end
     end
 
-    return self:replace(template, data)
+    return self:replace(self:template(), data)
 end
 
 function Formatter:_check_explicit_template_args()
@@ -705,7 +715,7 @@ function Formatter:_set_args_from_function()
     If an `options` argument is present store its position for the mapping of
     LaTeX macro arguments.
 --]]
-    local formatter = self._f
+    local formatter = self._func
     -- ignore any given arguments
     self._macro_args = {}
     local arg_cnt = debug.getinfo(formatter).nparams
@@ -742,7 +752,7 @@ function Formatter:_set_args_from_template()
     one (plus 'options') fields. Please
     specify arguments manually:
     %s
-    ]], self._f))
+    ]], self:template()))
         end
         table.insert(self._macro_args, v)
     end

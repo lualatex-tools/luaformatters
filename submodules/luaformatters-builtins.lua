@@ -422,7 +422,7 @@ end
 for k, v in pairs(Formatters) do
     Formatters[k] = {
         name = '_'..k,
-        f = v
+        func = v
     }
 end
 

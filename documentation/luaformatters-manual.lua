@@ -47,7 +47,7 @@ MANUAL:add_formatters('Shorthands', {
     -- This macro is (re)used in the `image` macro.
     -- 'nocolor' is used because we will want the bare text to be used in LaTeX.
     mediadir = {
-        f = './media',
+        template = './media',
         comment = 'relative path to a media directory',
         color = 'nocolor',
     },
@@ -58,7 +58,7 @@ MANUAL:add_formatters('Shorthands', {
         but no LaTeX macro created.
     --]]
     hidden = {
-        f = [[This would only be used by other Formatters
+        template = [[This would only be used by other Formatters
               but not from LaTeX]],
         name = '_hidden',
     },
@@ -69,7 +69,7 @@ MANUAL:add_formatters('Styles (templates with one mandatory argument)', {
         textbfit = [[\textbf{\textit{<<<text>>>}}]],
         -- style with additional textual element
         cmd = {
-            f = [[\texttt{\textbf{\textbackslash <<<name>>>}}]],
+            template = [[\texttt{\textbf{\textbackslash <<<name>>>}}]],
             color = 'nocolor',
             comment = 'Typeset a command name (without explicit argument support)'
         },
@@ -77,7 +77,7 @@ MANUAL:add_formatters('Styles (templates with one mandatory argument)', {
         -- can therefore be inferred without an 'args' field.
         -- 'opt' sets default value for optional macro argument
         image = {
-            f = [[\includegraphics[<<<options>>>]{\mediadir/<<<image>>>}]],
+            template = [[\includegraphics[<<<options>>>]{\mediadir/<<<image>>>}]],
             color = 'nocolor',
             opt = 'width=2cm',
         },
@@ -93,7 +93,7 @@ MANUAL:add_formatters('Formatters (templates with more than one argument)', {
         a 'figure' environment can't be wrapped in a \textcolor command.
     --]]
     floatImage = {
-        f = [[
+        template = [[
 \begin{figure}
 \centering
 \includegraphics[<<<options>>>]{\mediadir/<<<image>>>}
@@ -110,7 +110,7 @@ MANUAL:add_formatters('Formatters (templates with more than one argument)', {
     --]]
     literature = {
         book = {
-            f = [[<<<title>>>\textsuperscript{(ed.\,<<<edition>>>)}]],
+            template = [[<<<title>>>\textsuperscript{(ed.\,<<<edition>>>)}]],
             args = { 'title', 'edition' },
         },
     },
@@ -134,7 +134,7 @@ MANUAL:add_formatters('functions', {
 MANUAL:add_formatter('literature.book_alternative', {
     name = 'bookShort',
     comment = 'A book definition for inline use',
-    f = [[\textbf{<<<author>>>}: \emph{<<<title>>>} (<<<year>>>)]],
+    template = [[\textbf{<<<author>>>}: \emph{<<<title>>>} (<<<year>>>)]],
     color = 'magenta',
     args = {'author', 'title', 'year'},
     -- opt does not make sense here
@@ -157,12 +157,12 @@ MANUAL:provide_namespace{
     thanks to the previous namespace provision.
 --]]
 MANUAL:add_formatter('music.composer.name', {
-    f = [[\emph{<<<name>>>}]],
+    template = [[\emph{<<<name>>>}]],
     color = 'magenta',
 })
 
 MANUAL:add_formatter('music.work.source', {
-    f = [[\textsc{<<<abbreviation>>>}]],
+    template = [[\textsc{<<<abbreviation>>>}]],
     color = 'olive',
 })
 

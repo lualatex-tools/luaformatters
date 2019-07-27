@@ -1023,29 +1023,37 @@ Entry Table} in all but the most simple projects because these make the code
 more explicit, especially in combination with the self-documenting features
 described in \vref{sec:self-documentation}.
 
-The formatter entry table is a flat table with one mandatory and a number of
-(conditionally) optional fields:
+The formatter entry table is a flat table with a number of allowed fields.  At
+least one out of \luavar{template} and \luavar{func} must be present.
 
-\paragraph{\luavar{f}}
+\paragraph{\luavar{template}}
 
-The mandatory field \luavar{f} (as in \luavar{\textbf{f}}ormatter) holds the
-actual formatter, either a template string or a formatter function.  Note that
-if a \term{Formatter Entry} merely contains a string or function it is
-implicitly wrapped in a \term{Formatter Entry Table}, storing the formatter as
-the \luavar{f} field:
-
-
-\begin{minted}{lua}
-MANUAL:add_formatter('LoC', [[Library of Congress]])
-\end{minted}
-
-\noindent will implicitly be converted (or: is equivalent) to
+The string template to be used for the formatter.  If no function is declared in
+addition the template will be used and the fields replaced with values.
 
 \begin{minted}{lua}
 MANUAL:add_formatter('LoC', {
-	f = [[Library of Congress]]
+	template = [[Library of Congress]]
 })
 \end{minted}
+
+
+\paragraph{\luavar{func}}
+
+A function can be stored as well.  If present it will be called automatically to
+apply the formatter.
+
+\begin{minted}{lua}
+MANUAL:add_formatter('reverse', {
+	func= function(self, text) return text:reverse() end,
+})
+\end{minted}
+
+\noindent If both a function and a template are declared the function will
+always be called, but the function can access the template with
+\luavar{self:template()} and process it with \luavar{self:replace()}.  If only a
+string or a function is used as the value of a formatter it will implicitly be
+wrapped and saved in the correct field.
 
 
 \paragraph{\luavar{name}}
@@ -2674,6 +2682,10 @@ later published by another client, the \luavar{parent} is still the original
 client.%
 \footnote{\NOTE{TODO:} \url{https://github.com/uliska/luaformatters/issues/34}}
 
+
+\item \luavar{Formatter:template()}\\
+If the formatter has a template registered it can be retrieved using this
+property.  Otherwise \texttt{nil} is returned.
 \end{itemize*}
 
 
