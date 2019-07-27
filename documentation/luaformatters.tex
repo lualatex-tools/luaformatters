@@ -2682,8 +2682,8 @@ client.%
 
 The following paragraphs describe the publicly available functions of a
 \luavar{Formatter} object.  Note that only \luavar{check\_options()},
-\luavar{\_format()} and \luavar{is\_formatter()} are \emph{intended} for public
-use.
+\luavar{\_format()}, \luavar{is\_formatter()} and \luavar{replace()} are
+\emph{intended} for public use.
 
 
 \paragraph{\luavar{Formatter:apply(...)}}
@@ -2768,6 +2768,16 @@ client to discern between formatter entries and tree nodes.  The function
 returns \texttt{true} if the given object appears to be a correct
 \term{Formatter Entry Table} -- or, of course, if it is an actual
 \luavar{Formatter} object.
+
+
+\paragraph{\luavar{Formatter:replace(template, replacements)}}
+\label{sec:advanced:formatter:replace}
+
+This command can be used like a class function to replace fields in a string
+template with values given in a replacement table.  No further checks about
+validity or plausibility of the arguments is done: when used from within
+\luavar{Formatter:\_apply\_template()} this has already been taken care of, and
+when external code wants to use the function it has to do so on its own.
 
 
 \paragraph{\luavar{Formatter:update(entries)}}

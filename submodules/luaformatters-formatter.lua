@@ -373,6 +373,17 @@ function Formatter:parent()
     return self._parent
 end
 
+function Formatter:replace(template, replacements)
+--[[
+    Replace all fields passed by the `replacements` table
+    in the string `template`
+--]]
+    for k, v in pairs(replacements) do
+        template = template:gsub('<<<'..k..'>>>', v)
+    end
+    return template
+end
+
 function Formatter:set_parent(parent)
     self._parent = parent
 end
@@ -448,12 +459,7 @@ Replacement:
         end
     end
 
-    -- Perform the actual replace operation
-    local template = self._f
-    for k, v in pairs(data) do
-        template = template:gsub('<<<'..k..'>>>', v)
-    end
-    return template
+    return self:replace(template, data)
 end
 
 function Formatter:_check_explicit_template_args()
