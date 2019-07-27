@@ -78,7 +78,7 @@ end
 function Formatter:apply(...)
 --[[
     Apply the formatter (called from the LaTeX macro).
-    If the formatter is a template call _apply_template().
+    If the formatter is a template call apply_template().
     If it is a function check if it contains an optional argument,
     process it with self:check_options and call the internal formatter.
     This means that within a formatter the `options` argument is already
@@ -94,8 +94,70 @@ function Formatter:apply(...)
         end
         return self:_func(unpack(args))
     else
-        return self:_apply_template(...)
+        return self:apply_template(...)
     end
+end
+
+function Formatter:apply_template(...)
+--[[
+    Use the template to format the given values.
+
+    The argument(s) may be one out of:
+    - a string
+      Find a single replacement field in the template
+      and replace it with the argument
+    - an association table
+      The table will be used to match fields with data
+      TODO: Consider validating this too (match fields, like it is
+      done during macro creation)
+    - an array plus additional arguments
+      The array contains field names, whose number must match
+      the number of remaining varargs.
+--]]
+    -- first set up the replacement table
+    local args = { ... }
+    if #args == 0 then return self:template() end
+    local data
+    local first = table.remove(args, 1)
+
+    if type(first) == 'string' then
+        local field = self:fields()
+        if #field == 0 then
+            warn([[
+Replace template containing no fields
+with a single string. Returning the template,
+ignoring the replacement value.
+Template:
+%s
+Replacement:
+%s
+]], self:template(), first)
+            return template
+        elseif #field > 1 then
+            warn([[
+Replace template containing multiple fields
+with a single string. Using the first field,
+leaving the following field(s) unreplaced:
+Template:
+%s
+Replacement:
+%s
+]], self:template(), first)
+        end
+        data = { [field[1]] = first }
+    elseif #first == 0 then
+        -- Obviously the (first) argument is a replacement table
+        data = first
+    else
+        -- first argument is expected to an array with field names
+        -- TODO: validate the argument number
+        data = {}
+        for i, v in ipairs(first) do
+            data[v] = args[i]
+        end
+    end
+
+    return self:replace(self:template(), data)
 end
 
 function Formatter:args()
@@ -409,68 +471,6 @@ end
 --[[
     Private functions for internal use only
 --]]
-
-function Formatter:_apply_template(...)
---[[
-    Use the template to format the given values.
-
-    The argument(s) may be one out of:
-    - a string
-      Find a single replacement field in the template
-      and replace it with the argument
-    - an association table
-      The table will be used to match fields with data
-      TODO: Consider validating this too (match fields, like it is
-      done during macro creation)
-    - an array plus additional arguments
-      The array contains field names, whose number must match
-      the number of remaining varargs.
---]]
-    -- first set up the replacement table
-    local args = { ... }
-    if #args == 0 then return self:template() end
-    local data
-    local first = table.remove(args, 1)
-
-    if type(first) == 'string' then
-        local field = self:fields()
-        if #field == 0 then
-            warn([[
-Replace template containing no fields
-with a single string. Returning the template,
-ignoring the replacement value.
-Template:
-%s
-Replacement:
-%s
-]], self:template(), first)
-            return template
-        elseif #field > 1 then
-            warn([[
-Replace template containing multiple fields
-with a single string. Using the first field,
-leaving the following field(s) unreplaced:
-Template:
-%s
-Replacement:
-%s
-]], self:template(), first)
-        end
-        data = { [field[1]] = first }
-    elseif #first == 0 then
-        -- Obviously the (first) argument is a replacement table
-        data = first
-    else
-        -- first argument is expected to an array with field names
-        -- TODO: validate the argument number
-        data = {}
-        for i, v in ipairs(first) do
-            data[v] = args[i]
-        end
-    end
-
-    return self:replace(self:template(), data)
-end
 
 function Formatter:_check_explicit_template_args()
 --[[

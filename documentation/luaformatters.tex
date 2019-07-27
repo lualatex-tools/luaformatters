@@ -2706,8 +2706,15 @@ possible to use this function too after having obtained a \luavar{Formatter}
 object through \luavar{Formatters:formatter(key)}, but the canonical way of using
 another formatter is \luavar{self:format(key, ...)}.  If the internal formatter
 is a function then the \luavar{...} arguments are simply passed on to the
-function's argument list, in case of a string templates it is more complex: The
-arguments may be one out of:
+function's argument list,
+
+\paragraph{\luavar{Formatter:apply\_template(...)}}
+\label{sec:advanced:formatter:apply-template}
+
+is the function that is implicitly called from \luavar{apply()} when the
+formatter is a \emph{string template}, but can also be used explicitly, for
+example from a \luavar{Formatter} that has both a function and a template.   The
+\luavar{...} arguments may be one out of:
 
 \begin{itemize*}
 \item A replacement table mapping field names to values
