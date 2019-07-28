@@ -332,8 +332,7 @@ function Formatter:fields()
 --]]
     if not self._fields then
         self._fields = {}
-        if not self:is_func() then
-            self._fields = {}
+        if self._template then
             local _result = {}
             local i = 0
             local template = self:template()
