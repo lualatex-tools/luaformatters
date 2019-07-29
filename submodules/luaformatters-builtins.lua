@@ -292,9 +292,9 @@ function Formatters:list_format(text, options)
     if formatter then
         for i, elt in ipairs(elements) do
             if type(formatter) == 'function' then
-                elements[i] = formatter(self, elt)
+                elements[i] = formatter(self, elt, options)
             else
-                elements[i] = self:format(formatter, elt)
+                elements[i] = self:format(formatter, elt, options)
             end
         end
     end
@@ -374,7 +374,10 @@ function Formatters:range(text, options)
     which by default is '--'.
     The package options can also be overridden by the optional `options` table.
     --]]
-    local formatter = options.formatter or 'number'
+    local formatter = options.formatter
+    if not formatter or formatter == 'range' then
+        formatter = 'number'
+    end
     local from, to = self:split_range(text)
     if not to then return self:format(formatter, text, options)
     elseif to:sub(1, 1) == 'f' then

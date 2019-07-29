@@ -86,6 +86,8 @@ function Formatter:apply(...)
 --]]
     if self._func then
         local args = { ... }
+        -- ensure args have been processed (even in hidden formatter)
+        self:args()
         local opt_index = self:has_options()
         if opt_index then
             local options = table.remove(args, opt_index)
