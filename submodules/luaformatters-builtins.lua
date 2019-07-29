@@ -203,12 +203,6 @@ function Formatters:add_element(base, element, separator)
         return base
     else
         local sep = separator or formatters_opts['element-separator']
-        if not separator then
-            warn([[
-Bug:
-Add_element swallows spaces
-from option-provided separator!]])
-        end
         return base .. sep .. element
     end
 end
