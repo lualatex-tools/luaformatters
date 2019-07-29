@@ -210,8 +210,6 @@ function Formatter:check_options(options, ignore_declarations)
             result[k] = v
         end
     else
-        -- store the original string in case someone needs it
-        table.insert(result, options)
         -- finally have the string parsed and validated
         local loc_opts
         if self._options and not ignore_declarations then
@@ -229,13 +227,15 @@ function Formatter:check_options(options, ignore_declarations)
             result[k] = v
         end
         -- handle boolean values, converting from strings to booleans
-        -- (NOTE: empty string represents `true`)
-        -- TODO: This should be handled/fixed in lyluatex-options?
+        -- NOTE: empty string represents `true`
+        -- TODO: Should this be handled/fixed in lyluatex-options?
         for k, v in pairs(result) do
             if v == '' or v == 'true' then result[k] = true
             elseif v == 'false' then result[k] = false end
         end
     end
+    -- store the original string in case someone needs it
+    table.insert(result, options)
     return result
 end
 
