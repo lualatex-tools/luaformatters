@@ -78,6 +78,13 @@ function Formatters:add(client)
 end
 
 
+function Formatters:client(name)
+--[[
+    Return the client registered with the given name, or nil
+--]]
+    return self._clients[name]
+end
+
 function Formatters:format(key, ...)
 --[[
     Format and return the given data using a formatter addressed by `key`.
