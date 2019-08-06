@@ -100,7 +100,7 @@ function Formatter:apply(...)
     end
 end
 
-function Formatter:apply_template(...)
+function Formatter:_apply_template(template, ...)
 --[[
     Use the template to format the given values.
 
@@ -118,13 +118,13 @@ function Formatter:apply_template(...)
 --]]
     -- first set up the replacement table
     local args = { ... }
-    if #args == 0 then return self:template() end
+    if #args == 0 then return template end
     local data
     local first = table.remove(args, 1)
 
     if type(first) == 'string' then
-        local field = self:fields()
-        if #field == 0 then
+        local fields = self:_fields_from_template(template)
+        if #fields == 0 then
             warn([[
 Replace template containing no fields
 with a single string. Returning the template,
@@ -133,9 +133,9 @@ Template:
 %s
 Replacement:
 %s
-]], self:template(), first)
+]], template, first)
             return template
-        elseif #field > 1 then
+        elseif #fields > 1 then
             warn([[
 Replace template containing multiple fields
 with a single string. Using the first field,
@@ -144,9 +144,9 @@ Template:
 %s
 Replacement:
 %s
-]], self:template(), first)
+]], template, first)
         end
-        data = { [field[1]] = first }
+        data = { [fields[1]] = first }
     elseif #first == 0 then
         -- Obviously the (first) argument is a replacement table
         data = first
@@ -159,7 +159,14 @@ Replacement:
         end
     end
 
-    return self:replace(self:template(), data)
+    return self:_replace(template, data)
+end
+
+function Formatter:apply_template(...)
+--[[
+    Apply the template that is stored in the Formatter object.
+--]]
+    return self:_apply_template(self:template(), ...)
 end
 
 function Formatter:args()
@@ -326,28 +333,38 @@ but package option 'self-documentation' seems not to be active
     return result
 end
 
-function Formatter:fields()
+function Formatter:_fields_from_template(template)
 --[[
     Return an array table with all template fields in the given template.
     Order of appearance is preserved, duplicates are suppressed.
     If an 'options' field is present, it is stored in the first position.
 --]]
+    local result, _result = {}, {}
+    if template:find('options') then
+        table.insert(result, 'options')
+        _result.options = true
+    end
+    for element in template:gmatch('<<<(%w+)>>>') do
+        if not _result[element] then
+            _result[element] = true
+            table.insert(result, element)
+        end
+    end
+    return result
+end
+
+function Formatter:fields()
+--[[
+    The fields in the current Formatter.
+    Will be retrieved upon first use. Stores the index of an `options`
+    field to indicate that the Formatter *has* options.
+--]]
     if not self._fields then
         self._fields = {}
         if self._template then
-            local _result = {}
-            local i = 0
-            local template = self:template()
-            if template:find('options') then
+            self._fields = self:_fields_from_template(self:template())
+            if self._fields[1] == 'options' then
                 self._opt_index = 1
-                table.insert(self._fields, 'options')
-                _result.options = true
-            end
-            for element in template:gmatch('<<<(%w+)>>>') do
-                if not _result[element] then
-                    _result[element] = true
-                    table.insert(self._fields, element)
-                end
             end
         end
     end
@@ -371,6 +388,8 @@ function Formatter:has_options()
 --[[
     Return the argument index of the optional argument (if present) or nil.
 --]]
+    -- ensure the arguments are parsed.
+    self:fields()
     return self._opt_index
 end
 
@@ -439,7 +458,7 @@ function Formatter:parent()
     return self._parent
 end
 
-function Formatter:replace(template, replacements)
+function Formatter:_replace(template, replacements)
 --[[
     Replace all fields passed by the `replacements` table
     in the string `template`
@@ -448,6 +467,14 @@ function Formatter:replace(template, replacements)
         template = template:gsub('<<<'..k..'>>>', v)
     end
     return template
+end
+
+function Formatter:replace(template, ...)
+--[[
+    Apply the templating logic to a *given* template.
+    Basically the same as apply_template, but with a user-provided argument.
+--]]
+    return self:_apply_template(template, ...)
 end
 
 function Formatter:set_parent(parent)
