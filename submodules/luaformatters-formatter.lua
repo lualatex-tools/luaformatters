@@ -60,6 +60,8 @@ function Formatter:new(parent, key, formatter)
         _key = key,
         -- lua_formatters “client”
         _parent = parent,
+        -- "option clients" for option validation
+        _option_clients = {},
     }
     setmetatable(o, Formatter)
     -- initialize macro name, may be overridden if 'name' property is given
@@ -67,8 +69,12 @@ function Formatter:new(parent, key, formatter)
     -- assign options declaration if given
     if formatter.options then
         o._options = lua_options.Opts:new(formatter.options)
+        for k, _ in pairs(formatter.options) do
+            o._option_clients[k] = o._options
+        end
         formatter.options = nil
     end
+    formatter = o._validate_client_options(o, formatter)
     -- copy all properties that are given explicitly
     Formatter.update(o, formatter)
 
@@ -205,6 +211,14 @@ function Formatter:check_options(options, ignore_declarations)
             result[k] = v
         end
     end
+    if self._client_options then
+        -- load options from client, retrieve currently set values.
+        for client, opts in pairs(self._client_options) do
+            for _, opt in ipairs(opts) do
+                result[opt] = lua_options.get_option(client, opt)
+            end
+        end
+    end
     if not options then return result
     elseif type(options) == 'table' then
         --[[
@@ -217,22 +231,29 @@ function Formatter:check_options(options, ignore_declarations)
             result[k] = v
         end
     else
-        -- finally have the string parsed and validated
-        local loc_opts
-        if self._options and not ignore_declarations then
-            -- use the formatter's option declaration
-            loc_opts = self._options:check_local_options(options)
-        else
-            -- use the package's generic tool without validation
-            loc_opts = formatters_opts:check_local_options(options, true)
-        end
+        -- finally we have a 'plain' option string
+        -- first parse the string to a table, without validation
+        local loc_opts = formatters_opts:check_local_options(options, true)
+        -- iterate over options to validate them as formatter or client option
         for k, v in pairs(loc_opts) do
-            -- validate against expected values/types
-            if self._options then
-                self._options:validate_option(k, { [k] = v })
+            client = self._option_clients[k]
+            if client then
+                -- validate with the available option client
+                k, v = client:sanitize_option(k, v)
+                client:validate_option(k, loc_opts)
+                result[k] = v
+            elseif self._options then
+                -- if options are defined we have to validate,
+                -- otherwise unknown options would be ignored.
+                err(string.format([[
+Unknown option
+`%s`
+for Formatter
+`%s`.
+]], k, self:name()))
             end
-            result[k] = v
         end
+
         -- handle boolean values, converting from strings to booleans
         -- NOTE: empty string represents `true`
         -- TODO: Should this be handled/fixed in lyluatex-options?
@@ -784,6 +805,50 @@ function Formatter:_set_args_from_template()
         end
         table.insert(self._macro_args, v)
     end
+end
+
+function Formatter:_validate_client_options(formatter)
+--[[
+    Validate given client options.
+    Client options can only work if there's a corresponding option,
+    i.e. a lua_options client, which also have to have all options defined.
+--]]
+    local options = formatter.client_options
+    if options then
+        if #options > 0 then
+            -- client options are given as an array, assign to "current" client
+            options = { [self._parent:name()] = options }
+        end
+        local client
+        for cname, opts in pairs(options) do
+            client = lua_options.client(cname)
+            if not client then
+                err(string.format([[
+Try registering client option
+for non-existing client
+`%s`
+in Formatter
+`%s`.
+    ]], cname, self:name()))
+            end
+            self._option_clients[cname] = client
+            for _, opt in ipairs(opts) do
+                if client:has_option(opt) then
+                    self._option_clients[opt] = client
+                else
+                    err(string.format([[
+Trying to set non-existent client option
+`%s`
+for client
+`%s`
+in formatter
+`%s`.
+]], opt, cname, self:name()))
+                end
+            end
+        end
+    end
+    return formatter
 end
 
 
