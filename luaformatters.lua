@@ -210,6 +210,8 @@ function Formatters:_create_macros(client)
     for key, formatter in pairs(self._formatters[client:name()]) do
         macro = formatter:macro()
         if macro then
+            texio.write_nl(string.format([[
+(luaformatters) Create macro \%s]], formatter:name()))
             self:write_latex(macro)
         end
     end
