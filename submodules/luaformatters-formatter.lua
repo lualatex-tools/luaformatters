@@ -74,10 +74,10 @@ function Formatter:new(parent, key, formatter)
         end
         formatter.options = nil
     end
+    o._create = formatter.create or 'new*'
     formatter = o._validate_client_options(o, formatter)
     -- copy all properties that are given explicitly
     Formatter.update(o, formatter)
-
     return o
 end
 
@@ -587,14 +587,23 @@ function Formatter:_create_macro()
     local args = self:_format_args()
     if args ~= '' then args = ', ' .. args end
 
+    -- set up way the macro is created in LaTeX
+    local create, star = self._create:match('(.+)(*)')
+    if not create then
+        create = self._create
+        star = ''
+    end
+
     -- Set up templates, nested for better readability
     local wrapper_template = [[
-\newcommand{\<<<name>>>}<<<argnums>>>{\directlua{<<<lua>>>}}]]
+\<<<create>>>command<<<star>>>{\<<<name>>>}<<<argnums>>>{\directlua{<<<lua>>>}}]]
     local lua_template = [[
 lua_formatters:write({ '<<<formatter>>>', '<<<color>>>' }<<<args>>>)]]
 
     -- Populate templates with actual data
     wrapper_template = wrapper_template:gsub(
+    '<<<create>>>', create):gsub(
+    '<<<star>>>', star):gsub(
     '<<<name>>>', self:name()):gsub(
     '<<<argnums>>>', self:_format_arg_nums())
 
