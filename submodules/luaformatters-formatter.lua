@@ -236,22 +236,13 @@ function Formatter:check_options(options, ignore_declarations)
         local loc_opts = formatters_opts:check_local_options(options, true)
         -- iterate over options to validate them as formatter or client option
         for k, v in pairs(loc_opts) do
-            client = self._option_clients[k]
-            if client then
+            validator = self._option_clients[k] or self._options
+            if validator then
                 -- validate with the available option client
-                k, v = client:sanitize_option(k, v)
-                client:validate_option(k, loc_opts)
-                result[k] = v
-            elseif self._options then
-                -- if options are defined we have to validate,
-                -- otherwise unknown options would be ignored.
-                err(string.format([[
-Unknown option
-`%s`
-for Formatter
-`%s`.
-]], k, self:name()))
+                k, v = validator:sanitize_option(k, v)
+                validator:validate_option(k, loc_opts)
             end
+            result[k] = v
         end
 
         -- handle boolean values, converting from strings to booleans
