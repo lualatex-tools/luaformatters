@@ -261,9 +261,9 @@ for Formatter
             if v == '' or v == 'true' then result[k] = true
             elseif v == 'false' then result[k] = false end
         end
+        -- store the original string in case someone needs it
+        table.insert(result, options)
     end
-    -- store the original string in case someone needs it
-    table.insert(result, options)
     return result
 end
 
