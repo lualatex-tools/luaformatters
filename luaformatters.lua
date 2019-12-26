@@ -65,6 +65,9 @@ function Formatters:add(client)
     -- TODO: Document that the client will get these fields set
     -- (so if they'd use them they'd get overridden)
 
+    if client.options then
+        client.options = lua_options.register(client:name(), client.options)
+    end
     -- Register the formatters local to the client
     self:_register_local_formatters(client)
     -- Process the entries in client.formatter
