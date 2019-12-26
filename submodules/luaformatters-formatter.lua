@@ -392,7 +392,7 @@ function Formatter:_format(key, ...)
 Formatter %s
 not found in client
 %s
-        ]], self:parent():name(), key))
+        ]], key, self:parent():name()))
     return formatter:apply(...)
 end
 
