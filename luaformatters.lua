@@ -310,6 +310,6 @@ end
 handle_dependencies()
 
 -- Register the built-in formatters.
-Formatters:add(require('luaformatters-builtins'))
+Formatters:add(require('submodules/luaformatters-builtins.lua'))
 
 return Formatters
