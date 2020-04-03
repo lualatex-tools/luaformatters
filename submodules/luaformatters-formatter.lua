@@ -46,10 +46,18 @@ function Formatter:new(parent, key, formatter)
     those fields that are ready to have them at this point.
     A *new* table is created while the original formatter is not changed.
 --]]
+
     if type(formatter) == 'string' then
         formatter = { template = formatter }
     elseif type(formatter) == 'function' then
         formatter = { func = formatter }
+    elseif type(formatter) == 'table' then
+        if type(formatter.f) == 'string' then
+            formatter.template = formatter.f
+        elseif type(formatter.f) == 'function' then
+            formatter.func = formatter.f
+        end
+        formatter.f = nil
     end
     local o = {
         -- flag to discern from primitive Formatter Entry Table
