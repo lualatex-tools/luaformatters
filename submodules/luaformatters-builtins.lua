@@ -445,12 +445,14 @@ if formatters_opts['self-documentation'] then
             comment =
                 'Write a single documentation string in a minted environment',
             color = 'nocolor',
+            create = 'new',
             options = opts,
         },
         docstrings_minted = {
             name = 'luaMacroDocClient',
             comment = 'Write doc strings for a whole client',
             color = 'nocolor',
+            create = 'new',
             options = opts,
         }
     }
