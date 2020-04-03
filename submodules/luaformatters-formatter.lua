@@ -423,7 +423,15 @@ function Formatter:is_formatter(obj)
     type(obj) == 'string'
     or type(obj) == 'function'
     or (type(obj) == 'table'
-        and (obj._func or obj.func or obj._template or obj.template))
+        and (
+            obj.f
+            or obj._f
+            or obj.func
+            or obj._func
+            or obj.template
+            or obj._template
+        )
+    )
 end
 
 function Formatter:is_func()
