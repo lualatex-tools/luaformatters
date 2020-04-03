@@ -6,11 +6,14 @@
 \begin{document}
 \section*{Validating Optional Arguments}
 
-\doFormat[formatter=bold]{This is some formatted text}
-% \doFormat[format=bold]{This fails because 'format' is no known option}
-% \doFormat[formatter=green]{This fails because 'green' is no expected value.}
+\doFormat[formatter=bold]{This is some formatted text}\\
+\doFormat[formatter=italic]{This is some \doFormat[formatter=superscript]{nestedly formatted} text}
+%\doFormat[format=bold]{This fails because 'format' is no known option}
+%\doFormat[formatter=green]{This fails because 'green' is no expected value.}
 
 This is a configurable \gap[rule,width=15mm] gap, just to show that options
 can be forced to be \LaTeX \gap lengths.
+
+%This fails with a message about the \gap[width=15g] illegal value.
 
 \end{document}
